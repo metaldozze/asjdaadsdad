@@ -10,26 +10,65 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Иконки FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
+        :root {
+            --bg-main: #0a0a0f;
+            --bg-sidebar: #121217;
+            --border-color: #262626;
+            --text-main: #f5f5f5;
+            --text-muted: #a3a3a3;
+            --bg-card: rgba(23, 23, 23, 0.4);
+            --bg-footer: rgba(18, 18, 23, 0.95);
+        }
+        
+        .light-theme {
+            --bg-main: #f4f4f5;
+            --bg-sidebar: #e4e4e7;
+            --border-color: #d4d4d8;
+            --text-main: #09090b;
+            --text-muted: #71717a;
+            --bg-card: rgba(228, 228, 231, 0.5);
+            --bg-footer: rgba(244, 244, 245, 0.95);
+        }
+
         body {
             font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            transition: background-color 0.3s, color 0.3s;
         }
-        /* Кастомный красивый скроллбар */
+        
+        aside, footer, .modal-bg {
+            background-color: var(--bg-sidebar);
+            border-color: var(--border-color);
+        }
+        
+        .custom-border {
+            border-color: var(--border-color);
+        }
+        
+        .custom-card {
+            background-color: var(--bg-card);
+            border-color: var(--border-color);
+        }
+
+        /* Кастомный скроллбар */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
         }
         ::-webkit-scrollbar-track {
-            background: #0f0f15;
+            background: var(--bg-main);
         }
         ::-webkit-scrollbar-thumb {
-            background: #312e81;
+            background: #4f46e5;
             border-radius: 10px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #4f46e5;
+            background: #6366f1;
         }
-        /* Анимация пульсации для обложки активного трека */
+
         @keyframes pulse-slow {
             0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.4)); }
             50% { transform: scale(1.03); filter: drop-shadow(0 0 25px rgba(168, 85, 247, 0.7)); }
@@ -39,13 +78,13 @@
         }
     </style>
 </head>
-<body class="bg-neutral-950 text-neutral-100 h-full flex flex-col overflow-hidden select-none">
+<body class="h-full flex flex-col overflow-hidden select-none">
 
     <div id="app-root" class="flex flex-1 h-full overflow-hidden">
         
         <!-- Боковая панель (Sidebar) -->
-        <aside class="w-64 bg-neutral-900 border-r border-neutral-800 flex flex-col justify-between hidden md:flex z-20">
-            <div class="p-6">
+        <aside class="w-64 border-r flex flex-col justify-between hidden md:flex z-20">
+            <div class="p-6 flex flex-col h-full overflow-y-auto">
                 <!-- Логотип платформы -->
                 <div class="flex items-center space-x-3 mb-8 cursor-pointer group" onclick="switchTab('home')">
                     <div class="w-10 h-10 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-900/30 group-hover:scale-105 transition-transform">
@@ -61,27 +100,44 @@
                         <span>Главная</span>
                     </button>
                     
-                    <button onclick="switchTab('search')" id="nav-search" class="w-full flex items-center space-x-4 px-4 py-3 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800/50 transition-all duration-200">
+                    <button onclick="switchTab('search')" id="nav-search" class="w-full flex items-center space-x-4 px-4 py-3 rounded-xl text-neutral-400 hover:text-violet-400 hover:bg-neutral-800/30 transition-all duration-200">
                         <i class="fa-solid fa-magnifying-glass w-5 text-center"></i>
                         <span>Поиск</span>
                     </button>
 
-                    <button onclick="switchTab('library')" id="nav-library" class="w-full flex items-center space-x-4 px-4 py-3 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800/50 transition-all duration-200">
+                    <button onclick="switchTab('library')" id="nav-library" class="w-full flex items-center space-x-4 px-4 py-3 rounded-xl text-neutral-400 hover:text-violet-400 hover:bg-neutral-800/30 transition-all duration-200">
                         <i class="fa-solid fa-layer-group w-5 text-center"></i>
-                        <span>Моя медиатека</span>
+                        <span>Медиатека</span>
                     </button>
 
-                    <button onclick="switchTab('support')" id="nav-support" class="w-full flex items-center space-x-4 px-4 py-3 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800/50 transition-all duration-200">
+                    <button onclick="switchTab('support')" id="nav-support" class="w-full flex items-center space-x-4 px-4 py-3 rounded-xl text-neutral-400 hover:text-violet-400 hover:bg-neutral-800/30 transition-all duration-200">
                         <i class="fa-solid fa-headset w-5 text-center"></i>
                         <span>Поддержка</span>
                     </button>
 
-                    <button onclick="switchTab('profile')" id="nav-profile" class="w-full flex items-center space-x-4 px-4 py-3 rounded-xl text-neutral-400 hover:text-white hover:bg-neutral-800/50 transition-all duration-200">
+                    <button onclick="switchTab('profile')" id="nav-profile" class="w-full flex items-center space-x-4 px-4 py-3 rounded-xl text-neutral-400 hover:text-violet-400 hover:bg-neutral-800/30 transition-all duration-200">
                         <i class="fa-solid fa-user w-5 text-center"></i>
                         <span>Профиль</span>
                     </button>
 
-                    <!-- Админ-меню кнопка -->
+                    <!-- Выложить трек и лимиты (ДОЛЖНЫ БЫТЬ ПОД КНОПКОЙ ПРОФИЛЯ) -->
+                    <div class="pt-2 pb-2 px-1 border-t border-b custom-border my-2">
+                        <div class="flex justify-between items-center px-1 mb-2">
+                            <span class="text-xs text-neutral-400">Лимит (5д):</span>
+                            <span id="sidebar-limit-text" class="text-xs font-bold text-violet-400">Загрузка...</span>
+                        </div>
+                        <button onclick="openUploadTrackModal()" class="flex items-center justify-center space-x-2 w-full py-2.5 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl font-semibold transition-all duration-300 shadow-md shadow-indigo-900/20 active:scale-95 text-xs text-white">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                            <span>Выложить трек</span>
+                        </button>
+                    </div>
+
+                    <button onclick="switchTab('settings')" id="nav-settings" class="w-full flex items-center space-x-4 px-4 py-3 rounded-xl text-neutral-400 hover:text-violet-400 hover:bg-neutral-800/30 transition-all duration-200">
+                        <i class="fa-solid fa-gear w-5 text-center"></i>
+                        <span>Настройки</span>
+                    </button>
+
+                    <!-- Админ-меню (Скрыто по умолчанию) -->
                     <button onclick="switchTab('admin')" id="nav-admin" class="w-full flex items-center space-x-4 px-4 py-3 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-950/20 transition-all duration-200 hidden border border-amber-500/20">
                         <i class="fa-solid fa-shield-halved w-5 text-center"></i>
                         <span>Панель админа</span>
@@ -89,36 +145,24 @@
                 </nav>
 
                 <!-- Разделитель -->
-                <div class="h-[1px] bg-neutral-800 my-6"></div>
+                <div class="h-[1px] bg-neutral-800 my-4"></div>
 
                 <!-- Раздел Плейлистов -->
-                <div class="space-y-4">
+                <div class="space-y-3 flex-1 overflow-y-auto">
                     <div class="flex items-center justify-between text-xs font-semibold text-neutral-500 uppercase tracking-wider px-4">
                         <span>Плейлисты</span>
                         <button onclick="openCreatePlaylistModal()" class="hover:text-white transition-colors">
                             <i class="fa-solid fa-plus text-sm"></i>
                         </button>
                     </div>
-                    <div id="sidebar-playlists" class="space-y-1 max-h-[180px] overflow-y-auto pr-1">
-                        <!-- Динамические плейлисты появятся тут -->
+                    <div id="sidebar-playlists" class="space-y-1">
+                        <!-- Динамические плейлисты -->
                     </div>
                 </div>
             </div>
-
-            <!-- Загрузка собственных MP3 и инфо о лимите -->
-            <div class="p-4 border-t border-neutral-800 bg-neutral-950/40 space-y-3">
-                <div class="flex justify-between items-center px-2">
-                    <span class="text-xs text-neutral-400">Лимит треков (5д):</span>
-                    <span id="sidebar-limit-text" class="text-xs font-bold text-violet-400">2/2</span>
-                </div>
-                <button onclick="openUploadTrackModal()" class="flex items-center justify-center space-x-2 w-full py-3 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl font-medium transition-all duration-300 shadow-md shadow-indigo-900/20 active:scale-95 text-sm">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <span>Выложить трек</span>
-                </button>
-            </div>
         </aside>
 
-        <main class="flex-1 flex flex-col bg-gradient-to-b from-indigo-950/20 via-neutral-950 to-neutral-950 overflow-y-auto relative pb-32">
+        <main class="flex-1 flex flex-col overflow-y-auto relative pb-32">
             
             <!-- Мобильная шапка -->
             <header class="flex md:hidden items-center justify-between px-6 py-4 bg-neutral-900/80 backdrop-blur-md sticky top-0 z-30 border-b border-neutral-800">
@@ -128,56 +172,39 @@
                     </div>
                     <span class="text-lg font-bold bg-gradient-to-r from-white to-violet-400 bg-clip-text text-transparent">SoundWave</span>
                 </div>
-                <div class="flex items-center space-x-3">
-                    <button onclick="switchTab('search')" class="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700 transition-colors">
-                        <i class="fa-solid fa-magnifying-glass text-neutral-300 text-sm"></i>
-                    </button>
-                    <button onclick="switchTab('library')" class="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700 transition-colors">
-                        <i class="fa-solid fa-layer-group text-neutral-300 text-sm"></i>
-                    </button>
-                    <button onclick="switchTab('support')" class="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700 transition-colors">
-                        <i class="fa-solid fa-headset text-neutral-300 text-sm"></i>
-                    </button>
-                    <button onclick="switchTab('profile')" class="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700 transition-colors">
-                        <i class="fa-solid fa-user text-neutral-300 text-sm"></i>
-                    </button>
+                <div class="flex items-center space-x-3 text-neutral-400">
+                    <button onclick="switchTab('search')" class="p-2 hover:text-white"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    <button onclick="switchTab('library')" class="p-2 hover:text-white"><i class="fa-solid fa-layer-group"></i></button>
+                    <button onclick="switchTab('settings')" class="p-2 hover:text-white"><i class="fa-solid fa-gear"></i></button>
+                    <button onclick="switchTab('profile')" class="p-2 hover:text-white"><i class="fa-solid fa-user"></i></button>
                 </div>
             </header>
 
             <!-- Вкладка: Главная -->
             <section id="tab-home" class="p-6 md:p-8 space-y-8">
-                <!-- Большой красивый баннер -->
-                <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 p-8 md:p-12 flex flex-col md:flex-row items-center justify-between shadow-2xl shadow-indigo-950/40">
+                <!-- Баннер -->
+                <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 p-8 md:p-12 flex flex-col md:flex-row items-center justify-between shadow-2xl">
                     <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.3),transparent)] pointer-events-none"></div>
                     <div class="relative z-10 max-w-xl text-center md:text-left space-y-4 mb-6 md:mb-0">
-                        <span class="px-3 py-1 bg-violet-500/20 text-violet-300 text-xs font-semibold uppercase tracking-widest rounded-full border border-violet-500/30">Горячая Новинка</span>
-                        <h1 class="text-3xl md:text-5xl font-black tracking-tight leading-tight">Почувствуй Свободу Ритма</h1>
-                        <p class="text-neutral-300 text-sm md:text-base font-light">Слушайте любимую музыку без ограничений, создавайте собственные плейлисты и загружайте личные MP3-треки в одно касание.</p>
+                        <span class="px-3 py-1 bg-violet-500/20 text-violet-300 text-xs font-semibold uppercase tracking-widest rounded-full border border-violet-500/30">Хит Недели</span>
+                        <h1 class="text-3xl md:text-5xl font-black tracking-tight leading-tight text-white">Cyberpunk Drive</h1>
+                        <p class="text-neutral-300 text-sm md:text-base font-light">Слушайте треки, загружайте свои MP3, создавайте плейлисты и общайтесь с поддержкой.</p>
                         <div class="flex flex-wrap gap-4 pt-2 justify-center md:justify-start">
-                            <button onclick="playFeaturedSong()" class="px-6 py-3 bg-white text-neutral-950 hover:bg-neutral-100 font-bold rounded-full shadow-lg shadow-white/10 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center space-x-2">
+                            <button onclick="playFeaturedSong()" class="px-6 py-3 bg-white text-neutral-950 hover:bg-neutral-100 font-bold rounded-full shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 flex items-center space-x-2">
                                 <i class="fa-solid fa-play text-black"></i>
                                 <span>Слушать хит</span>
                             </button>
-                            <button onclick="switchTab('library')" class="px-6 py-3 bg-neutral-900/60 backdrop-blur border border-neutral-700/50 hover:bg-neutral-800 text-white font-semibold rounded-full hover:scale-105 active:scale-95 transition-all duration-300">
-                                Моя медиатека
-                            </button>
                         </div>
                     </div>
-                    <!-- Визуальный макет обложки на баннере -->
                     <div class="relative w-48 h-48 md:w-56 md:h-56 flex-shrink-0">
                         <div class="absolute inset-0 bg-violet-500 rounded-3xl blur-2xl opacity-40"></div>
-                        <img id="featured-banner-img" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop" alt="Featured Cover" class="w-full h-full object-cover rounded-3xl relative z-10 border border-violet-500/30 shadow-2xl">
+                        <img src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop" class="w-full h-full object-cover rounded-3xl relative z-10 border border-violet-500/30 shadow-2xl">
                     </div>
                 </div>
 
-                <!-- Популярные Треки Платформы -->
+                <!-- Сетка треков -->
                 <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-xl md:text-2xl font-extrabold tracking-tight">Треки недели</h2>
-                        <span class="text-xs text-violet-400 font-semibold uppercase tracking-wider">Всего доступно: <span id="tracks-count">0</span></span>
-                    </div>
-                    
-                    <!-- Сетка треков -->
+                    <h2 class="text-xl md:text-2xl font-extrabold tracking-tight">Треки недели</h2>
                     <div id="recommended-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                         <!-- Динамически -->
                     </div>
@@ -187,23 +214,22 @@
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-2 space-y-4">
                         <h2 class="text-xl font-extrabold tracking-tight">Быстрый список воспроизведения</h2>
-                        <div id="quick-play-list" class="bg-neutral-900/40 backdrop-blur rounded-2xl border border-neutral-800/60 p-4 divide-y divide-neutral-800/50">
+                        <div id="quick-play-list" class="custom-card rounded-2xl border p-4 divide-y divide-neutral-800">
                             <!-- Динамически -->
                         </div>
                     </div>
                     
-                    <div class="bg-gradient-to-br from-neutral-900 via-neutral-900/90 to-indigo-950/20 rounded-2xl border border-neutral-800 p-6 space-y-6 flex flex-col justify-between">
+                    <div class="custom-card rounded-2xl border p-6 space-y-6 flex flex-col justify-between">
                         <div>
-                            <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Анализатор Спектра</span>
-                            <h3 class="text-lg font-bold mt-1">Визуализация Волны</h3>
-                            <p class="text-xs text-neutral-400 mt-1">Динамический рендеринг частот воспроизводимого аудио-файла.</p>
+                            <span class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Визуализация частот</span>
+                            <h3 class="text-lg font-bold mt-1">Анализатор Спектра</h3>
                         </div>
-                        <div class="w-full h-32 bg-neutral-950/80 rounded-xl relative overflow-hidden flex items-center justify-center border border-neutral-800">
+                        <div class="w-full h-32 bg-neutral-950 rounded-xl relative overflow-hidden flex items-center justify-center border custom-border">
                             <canvas id="visualizer-canvas" class="w-full h-full"></canvas>
                         </div>
                         <div class="flex items-center justify-between text-xs text-neutral-400">
-                            <span class="flex items-center"><span class="w-2.5 h-2.5 bg-green-500 rounded-full inline-block mr-1.5 animate-pulse"></span>Система активна</span>
-                            <span>CORS-эмуляция: On</span>
+                            <span>Система активна</span>
+                            <span>CORS: Эмуляция</span>
                         </div>
                     </div>
                 </div>
@@ -213,84 +239,92 @@
             <section id="tab-search" class="p-6 md:p-8 space-y-6 hidden">
                 <div class="space-y-2">
                     <h2 class="text-2xl font-extrabold tracking-tight">Поиск музыки</h2>
-                    <p class="text-xs text-neutral-400">Ищите любимых исполнителей, треки или жанры по всей медиатеке платформы.</p>
+                    <p class="text-xs text-neutral-400">Начните искать музыку. Например, введите "violess" или "виолесс".</p>
                 </div>
-
-                <!-- Строка поиска -->
                 <div class="relative max-w-2xl">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-neutral-400">
                         <i class="fa-solid fa-magnifying-glass"></i>
                     </span>
-                    <input type="text" id="search-input" oninput="handleSearch(this.value)" placeholder="Название трека, исполнитель... (работает виолесс / violess)" class="w-full py-4 pl-12 pr-6 bg-neutral-900/80 border border-neutral-800 rounded-2xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:border-transparent transition-all duration-300">
+                    <input type="text" id="search-input" oninput="handleSearch(this.value)" placeholder="Название трека, исполнитель..." class="w-full py-4 pl-12 pr-6 bg-neutral-900 border border-neutral-800 rounded-2xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-600">
                 </div>
-
-                <!-- Результаты поиска -->
                 <div class="space-y-4 pt-4">
                     <h3 class="text-lg font-bold">Найденные композиции (<span id="search-results-count">0</span>)</h3>
                     <div id="search-results-list" class="space-y-2">
-                        <div class="text-neutral-500 text-sm py-8 text-center bg-neutral-900/20 rounded-2xl border border-dashed border-neutral-800">Введите запрос для старта поиска...</div>
+                        <!-- Динамически -->
                     </div>
                 </div>
             </section>
 
             <!-- Вкладка: Медиатека -->
             <section id="tab-library" class="p-6 md:p-8 space-y-8 hidden">
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-neutral-800 pb-6">
-                    <div>
-                        <h2 class="text-2xl font-extrabold tracking-tight">Моя медиатека</h2>
-                        <p class="text-sm text-neutral-400 mt-1">Здесь находятся ваши любимые композиции и загруженные файлы.</p>
-                    </div>
+                <div>
+                    <h2 class="text-2xl font-extrabold tracking-tight">Моя медиатека</h2>
+                    <p class="text-sm text-neutral-400">Ваши плейлисты и понравившиеся композиции</p>
                 </div>
-
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- Любимые треки -->
+                    <!-- Избранное -->
                     <div class="space-y-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-lg font-bold flex items-center space-x-2 text-rose-400">
-                                <i class="fa-solid fa-heart"></i>
-                                <span>Избранное</span>
-                            </h3>
-                            <span id="favorites-count-badge" class="px-2.5 py-1 bg-rose-500/10 text-rose-400 rounded-full text-xs font-bold">0</span>
-                        </div>
-                        <div id="favorites-list" class="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                        <h3 class="text-lg font-bold text-rose-500 flex items-center space-x-2">
+                            <i class="fa-solid fa-heart"></i>
+                            <span>Избранные треки</span>
+                        </h3>
+                        <div id="favorites-list" class="space-y-2">
                             <!-- Динамически -->
                         </div>
                     </div>
-
-                    <!-- Ваши загруженные треки -->
+                    <!-- Плейлисты -->
                     <div class="space-y-4">
-                        <div class="flex items-center justify-between">
-                            <h3 class="text-lg font-bold flex items-center space-x-2 text-indigo-400">
-                                <i class="fa-solid fa-circle-arrow-up"></i>
-                                <span>Выложенные вами треки</span>
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-bold text-violet-500 flex items-center space-x-2">
+                                <i class="fa-solid fa-compact-disc"></i>
+                                <span>Плейлисты</span>
                             </h3>
-                            <span id="uploads-count-badge" class="px-2.5 py-1 bg-indigo-500/10 text-indigo-400 rounded-full text-xs font-bold">0</span>
+                            <button onclick="openCreatePlaylistModal()" class="px-3 py-1.5 bg-violet-600 text-white font-bold rounded-lg text-xs hover:bg-violet-500">Создать</button>
                         </div>
-                        <div id="uploaded-list" class="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                        <div id="library-playlists-list" class="grid grid-cols-2 gap-4">
                             <!-- Динамически -->
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Вкладка: Профиль пользователя -->
+            <!-- Вкладка: Чат поддержки (Пользовательский) -->
+            <section id="tab-support" class="p-6 md:p-8 space-y-6 hidden">
+                <div>
+                    <h2 class="text-2xl font-extrabold tracking-tight">Техническая Поддержка</h2>
+                    <p class="text-sm text-neutral-400">Свяжитесь с админом. Сообщения видны только вам и администратору.</p>
+                </div>
+                <div class="flex flex-col bg-neutral-900/60 border border-neutral-800 rounded-2xl h-[450px] overflow-hidden">
+                    <div id="support-messages-container" class="flex-1 p-6 overflow-y-auto space-y-4 flex flex-col">
+                        <!-- Сообщения -->
+                    </div>
+                    <div class="p-4 border-t border-neutral-800 bg-neutral-950/80 flex items-center gap-3">
+                        <label class="cursor-pointer p-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-xl transition-all">
+                            <i class="fa-solid fa-plus text-base"></i>
+                            <input type="file" id="support-image-input" accept="image/*" class="hidden" onchange="handleSupportImage(event)">
+                        </label>
+                        <input type="text" id="support-msg-input" placeholder="Напишите сообщение..." class="flex-1 py-3 px-4 bg-neutral-900 border border-neutral-800 rounded-xl text-white placeholder-neutral-500 focus:outline-none">
+                        <button onclick="sendSupportMessage()" class="px-5 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl font-bold transition-all text-white">Отправить</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Вкладка: Профиль -->
             <section id="tab-profile" class="p-6 md:p-8 space-y-8 hidden">
-                <div class="bg-neutral-900/60 border border-neutral-800/80 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative">
+                <div class="custom-card border rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative">
                     <div class="flex flex-col md:flex-row items-center gap-6 w-full">
-                        <!-- Секция аватара с модерацией -->
                         <div class="relative w-32 h-32 md:w-36 md:h-36 rounded-full overflow-hidden border-2 border-violet-500 shadow-lg bg-neutral-950 group">
-                            <img id="profile-avatar-img" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop" class="w-full h-full object-cover" alt="User Avatar">
+                            <img id="profile-avatar-img" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop" class="w-full h-full object-cover">
                             <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center cursor-pointer transition-opacity" onclick="triggerAvatarUpload()">
                                 <i class="fa-solid fa-camera text-white text-xl mb-1"></i>
                                 <span class="text-[10px] text-neutral-300 text-center px-2">Сменить аватар</span>
                             </div>
-                            <!-- Иконка часов при модерации -->
-                            <div id="avatar-moderation-badge" class="absolute top-2 right-2 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center border border-neutral-950 shadow hidden" title="На модерации">
+                            <div id="avatar-moderation-badge" class="absolute top-2 right-2 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center border border-neutral-950 shadow hidden">
                                 <i class="fa-solid fa-clock-rotate-left text-neutral-950 text-xs animate-spin"></i>
                             </div>
                         </div>
                         <input type="file" id="avatar-file-input" accept="image/*" class="hidden" onchange="handleAvatarChange(event)">
-
+                        
                         <div class="text-center md:text-left space-y-2 flex-1">
                             <div class="flex flex-wrap items-center justify-center md:justify-start gap-2">
                                 <h2 id="profile-nickname" class="text-2xl md:text-3xl font-extrabold tracking-tight">Пользователь</h2>
@@ -298,59 +332,85 @@
                                     <i class="fa-solid fa-pen"></i>
                                 </button>
                             </div>
-                            
                             <div class="flex items-center justify-center md:justify-start space-x-2 text-violet-400">
-                                <span id="profile-username" class="text-sm font-semibold">@user123</span>
+                                <span id="profile-username" class="text-sm font-semibold">@username</span>
                                 <button onclick="triggerUsernameChange()" class="text-neutral-500 hover:text-white transition-colors text-xs">
                                     <i class="fa-solid fa-at"></i> Изменить
                                 </button>
                             </div>
-                            
-                            <p class="text-xs text-neutral-400">На платформе с: <span id="profile-joined-date">01.01.2026</span></p>
-
-                            <!-- План подписки пользователя -->
+                            <p class="text-xs text-neutral-400">На платформе с: <span id="profile-joined-date">...</span></p>
                             <div class="pt-2 flex flex-wrap justify-center md:justify-start gap-2">
-                                <span id="profile-subscription-badge" class="px-3 py-1 bg-neutral-800 text-neutral-400 rounded-full text-xs font-bold border border-neutral-700 uppercase tracking-widest">Бесплатный план</span>
-                                <button onclick="openSubscriptionModal()" class="px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 rounded-full text-xs font-bold shadow-md transition-all active:scale-95">Улучшить план</button>
+                                <span id="profile-subscription-badge" class="px-3 py-1 bg-neutral-800 text-neutral-400 rounded-full text-xs font-bold border border-neutral-700 uppercase tracking-widest">Free Пакет</span>
+                                <button onclick="openSubscriptionModal()" class="px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 rounded-full text-xs font-bold shadow-md transition-all">Улучшить план</button>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Контент профиля: Плейлисты и личные треки -->
                 <div class="space-y-6">
                     <h3 class="text-xl font-bold border-b border-neutral-800 pb-3">Мои публичные плейлисты</h3>
                     <div id="profile-playlists-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                         <!-- Динамически -->
                     </div>
 
-                    <h3 class="text-xl font-bold border-b border-neutral-800 pb-3">Моя музыка</h3>
+                    <h3 class="text-xl font-bold border-b border-neutral-800 pb-3">Моя выложенная музыка</h3>
                     <div id="profile-tracks-list" class="space-y-2">
                         <!-- Динамически -->
                     </div>
                 </div>
             </section>
 
-            <!-- Вкладка: Чат поддержки (для не-админов) -->
-            <section id="tab-support" class="p-6 md:p-8 space-y-6 hidden">
+            <!-- Вкладка: Настройки -->
+            <section id="tab-settings" class="p-6 md:p-8 space-y-6 hidden">
                 <div class="space-y-2">
-                    <h2 class="text-2xl font-extrabold tracking-tight">Чат поддержки</h2>
-                    <p class="text-sm text-neutral-400">Задайте вопрос нашей команде. Только вы и администратор видят этот чат.</p>
+                    <h2 class="text-2xl font-extrabold tracking-tight">Настройки приложения</h2>
+                    <p class="text-sm text-neutral-400">Кастомизируйте систему, отправляйте жалобы и управляйте аккаунтом.</p>
                 </div>
-
-                <div class="flex flex-col bg-neutral-900/60 border border-neutral-800 rounded-2xl h-[450px] overflow-hidden">
-                    <div id="support-messages-container" class="flex-1 p-6 overflow-y-auto space-y-4 flex flex-col">
-                        <!-- Сообщения появятся тут -->
+                
+                <div class="custom-card border rounded-2xl p-6 space-y-6 max-w-xl">
+                    <!-- Тема -->
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold">Цветовая гамма</h4>
+                            <p class="text-xs text-neutral-400">Переключение между темной и светлой темами сайта.</p>
+                        </div>
+                        <button onclick="toggleTheme()" class="px-4 py-2 bg-neutral-800 text-neutral-200 border border-neutral-700 rounded-xl hover:bg-neutral-700 transition-all font-semibold text-xs flex items-center gap-2">
+                            <i class="fa-solid fa-circle-half-stroke"></i>
+                            <span id="theme-btn-text">Светлая тема</span>
+                        </button>
                     </div>
-                    
-                    <!-- Отправка сообщений -->
-                    <div class="p-4 border-t border-neutral-800 bg-neutral-950/80 flex items-center gap-3">
-                        <label class="cursor-pointer p-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-xl transition-all">
-                            <i class="fa-solid fa-plus text-base"></i>
-                            <input type="file" id="support-image-input" accept="image/*" class="hidden" onchange="handleSupportImage(event)">
-                        </label>
-                        <input type="text" id="support-msg-input" placeholder="Напишите сообщение..." class="flex-1 py-3 px-4 bg-neutral-900 border border-neutral-800 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-600">
-                        <button onclick="sendSupportMessage()" class="px-5 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl font-bold transition-all active:scale-95">Отправить</button>
+
+                    <!-- Тарифы -->
+                    <div class="flex justify-between items-center border-t border-neutral-800 pt-4">
+                        <div>
+                            <h4 class="font-bold">Тарифы и ограничения</h4>
+                            <p class="text-xs text-neutral-400">Плюсы и минусы всех доступных планов обслуживания.</p>
+                        </div>
+                        <button onclick="openInfoModal()" class="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-500 font-semibold text-xs">
+                            Инфо о планах
+                        </button>
+                    </div>
+
+                    <!-- Пожаловаться -->
+                    <div class="flex justify-between items-center border-t border-neutral-800 pt-4">
+                        <div>
+                            <h4 class="font-bold">Сообщить о проблеме</h4>
+                            <p class="text-xs text-neutral-400">Отправить жалобу на баг или нарушение администрации.</p>
+                        </div>
+                        <button onclick="openComplaintModal()" class="px-4 py-2 bg-rose-600 text-white rounded-xl hover:bg-rose-500 font-semibold text-xs">
+                            Пожаловаться
+                        </button>
+                    </div>
+
+                    <!-- Выход -->
+                    <div class="flex justify-between items-center border-t border-neutral-800 pt-4">
+                        <div>
+                            <h4 class="font-bold">Выйти из аккаунта</h4>
+                            <p class="text-xs text-neutral-400">Выход из текущего профиля SoundWave.</p>
+                        </div>
+                        <button onclick="handleLogout()" class="px-4 py-2 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-xl hover:bg-neutral-700 font-semibold text-xs">
+                            Выйти
+                        </button>
                     </div>
                 </div>
             </section>
@@ -362,21 +422,21 @@
                         <i class="fa-solid fa-toolbox"></i>
                         <span>Центр управления SoundWave (Admin)</span>
                     </h2>
-                    <p class="text-sm text-neutral-400 mt-1">Очередь модерации контента, генератор промокодов и чат техподдержки.</p>
+                    <p class="text-sm text-neutral-400 mt-1">Только для sobakastalina123@gmail.com</p>
                 </div>
 
                 <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    <!-- Колонка 1: Модерация аватарок, треков, плейлистов -->
+                    <!-- Модерация -->
                     <div class="space-y-6">
-                        <div class="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-6 space-y-4">
+                        <div class="custom-card border rounded-2xl p-6 space-y-4">
                             <h3 class="text-lg font-bold text-violet-400"><i class="fa-solid fa-clock-rotate-left mr-2"></i> Очередь модерации</h3>
-                            <div id="admin-moderation-list" class="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                            <div id="admin-moderation-list" class="space-y-4 max-h-[300px] overflow-y-auto pr-2">
                                 <!-- Список модерации -->
                             </div>
                         </div>
 
-                        <!-- Генератор промокодов -->
-                        <div class="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-6 space-y-4">
+                        <!-- Промокоды -->
+                        <div class="custom-card border rounded-2xl p-6 space-y-4">
                             <h3 class="text-lg font-bold text-amber-400"><i class="fa-solid fa-ticket mr-2"></i> Генератор промокодов</h3>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -395,48 +455,55 @@
                                     </select>
                                 </div>
                             </div>
-                            <button onclick="generatePromoCode()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold rounded-xl transition-all active:scale-95 text-sm">Сгенерировать промокод</button>
-                            <div id="generated-promo-display" class="p-3 bg-neutral-950/60 border border-neutral-800 rounded-xl text-center hidden">
+                            <button onclick="generatePromoCode()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold rounded-xl text-sm">Сгенерировать</button>
+                            <div id="generated-promo-display" class="p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-center hidden">
                                 <span class="text-xs text-neutral-400 block">Ваш промокод:</span>
-                                <span id="promo-code-output" class="text-lg font-mono font-bold text-amber-400 tracking-wider">CODE-XXXX</span>
+                                <span id="promo-code-output" class="text-lg font-mono font-bold text-amber-400 tracking-wider">...</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Колонка 2: Чат поддержки (Админ) & Lyrics редактор -->
+                    <!-- Lyrics & Поддержка -->
                     <div class="space-y-6">
-                        <div class="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-6 space-y-4">
-                            <h3 class="text-lg font-bold text-indigo-400"><i class="fa-solid fa-comments mr-2"></i> Все сообщения в поддержку</h3>
-                            <div id="admin-support-chat-container" class="space-y-3 h-[250px] overflow-y-auto bg-neutral-950 p-4 rounded-xl border border-neutral-800">
-                                <!-- Список сообщений от всех пользователей -->
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <input type="text" id="admin-reply-input" placeholder="Введите ответ в формате @userId текст сообщения..." class="flex-1 py-2.5 px-3 bg-neutral-950 border border-neutral-800 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-violet-600 text-white">
-                                <button onclick="sendAdminReply()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-sm transition-all">Ответить</button>
+                        <!-- Жалобы пользователей -->
+                        <div class="custom-card border rounded-2xl p-6 space-y-4">
+                            <h3 class="text-lg font-bold text-rose-500"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Поступившие жалобы</h3>
+                            <div id="admin-complaints-list" class="space-y-3 max-h-[200px] overflow-y-auto">
+                                <!-- Динамические жалобы -->
                             </div>
                         </div>
 
-                        <!-- Lyrics Редактор -->
-                        <div class="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-6 space-y-4">
-                            <h3 class="text-lg font-bold text-emerald-400"><i class="fa-solid fa-paragraph mr-2"></i> Синхронизатор Lyrics (Текста песен)</h3>
+                        <div class="custom-card border rounded-2xl p-6 space-y-4">
+                            <h3 class="text-lg font-bold text-indigo-400"><i class="fa-solid fa-comments mr-2"></i> Чат поддержки (Админ)</h3>
+                            <div id="admin-support-chat-container" class="space-y-3 h-[250px] overflow-y-auto bg-neutral-950 p-4 rounded-xl border border-neutral-800">
+                                <!-- Список тикетов -->
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="admin-reply-input" placeholder="Введите ответ (@айди текст сообщения...)" class="flex-1 py-2.5 px-3 bg-neutral-950 border border-neutral-800 rounded-xl text-sm text-white">
+                                <button onclick="sendAdminReply()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-sm text-white">Ответить</button>
+                            </div>
+                        </div>
+
+                        <!-- Синхронизатор Lyrics -->
+                        <div class="custom-card border rounded-2xl p-6 space-y-4">
+                            <h3 class="text-lg font-bold text-emerald-400"><i class="fa-solid fa-paragraph mr-2"></i> Синхронизатор Lyrics</h3>
                             <div>
-                                <label class="block text-xs text-neutral-400 font-semibold mb-1">Выберите ID трека</label>
-                                <select id="lyrics-track-selector" class="w-full p-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-sm text-white focus:outline-none">
+                                <label class="block text-xs text-neutral-400 font-semibold mb-1">Выберите трек</label>
+                                <select id="lyrics-track-selector" class="w-full p-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-sm text-white">
                                     <!-- Динамические треки -->
                                 </select>
                             </div>
                             <div class="space-y-2">
-                                <label class="block text-xs text-neutral-400 font-semibold">Текст & Тайминг строки (Формат: CC: Текст)</label>
                                 <div class="flex gap-2">
-                                    <input type="number" id="lyrics-timer" placeholder="Время (сек)" class="w-24 p-2 bg-neutral-950 border border-neutral-800 rounded-xl text-sm text-white text-center focus:outline-none">
-                                    <input type="text" id="lyrics-text" placeholder="Припев: Я лечу над городом..." class="flex-1 p-2 bg-neutral-950 border border-neutral-800 rounded-xl text-sm text-white focus:outline-none">
-                                    <button onclick="addLyricLine()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-sm transition-all">+</button>
+                                    <input type="number" id="lyrics-timer" placeholder="Время (сек)" class="w-24 p-2 bg-neutral-950 border border-neutral-800 rounded-xl text-sm text-white text-center">
+                                    <input type="text" id="lyrics-text" placeholder="Припев: Я лечу..." class="flex-1 p-2 bg-neutral-950 border border-neutral-800 rounded-xl text-sm text-white">
+                                    <button onclick="addLyricLine()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-sm text-white">+</button>
                                 </div>
                             </div>
                             <div id="added-lyrics-preview" class="p-3 bg-neutral-950 border border-neutral-800 rounded-xl max-h-[100px] overflow-y-auto text-xs text-neutral-400 space-y-1">
-                                <!-- Список добавленных строк -->
+                                <!-- Превью -->
                             </div>
-                            <button onclick="saveLyricsForTrack()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl transition-all text-sm active:scale-95">Привязать текст к треку</button>
+                            <button onclick="saveLyricsForTrack()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl text-sm text-white">Привязать слова к треку</button>
                         </div>
                     </div>
                 </div>
@@ -444,17 +511,16 @@
 
             <!-- Динамический вид плейлиста -->
             <section id="tab-playlist-view" class="p-6 md:p-8 space-y-6 hidden">
-                <!-- Заголовок плейлиста -->
                 <div class="flex flex-col md:flex-row items-center gap-6 border-b border-neutral-800 pb-8">
                     <div class="w-40 h-40 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg relative group">
                         <i class="fa-solid fa-compact-disc text-white text-6xl"></i>
                     </div>
-                    <div class="text-center md:text-left space-y-2">
+                    <div class="text-center md:text-left space-y-2 flex-1">
                         <span id="playlist-view-privacy" class="text-xs font-bold text-violet-400 uppercase tracking-widest">ПУБЛИЧНЫЙ ПЛЕЙЛИСТ</span>
                         <h2 id="playlist-view-title" class="text-3xl md:text-5xl font-extrabold tracking-tight">Название плейлиста</h2>
-                        <p id="playlist-view-desc" class="text-sm text-neutral-400">Кастомный плейлист пользователя.</p>
+                        <p id="playlist-view-desc" class="text-sm text-neutral-400">Описание плейлиста</p>
                         <div class="flex items-center justify-center md:justify-start gap-4 pt-3">
-                            <button id="playlist-play-btn" class="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 font-bold rounded-full text-sm">Включить плейлист</button>
+                            <button id="playlist-play-btn" class="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 font-bold rounded-full text-sm text-white">Слушать</button>
                             <button id="playlist-shuffle-btn" class="px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-full text-sm flex items-center space-x-2">
                                 <i class="fa-solid fa-shuffle"></i> <span>Перемешать</span>
                             </button>
@@ -463,7 +529,6 @@
                     </div>
                 </div>
 
-                <!-- Список треков в плейлисте -->
                 <div class="space-y-2">
                     <h3 class="text-lg font-bold">Список треков (<span id="playlist-tracks-count">0</span>)</h3>
                     <div id="playlist-tracks-list" class="space-y-2">
@@ -473,9 +538,8 @@
             </section>
         </main>
 
-        <!-- Правая панель: Сведения о треке и Текст песен (скрыто на мобильных) -->
-        <aside id="right-lyrics-panel" class="w-80 bg-neutral-900 border-l border-neutral-800 flex flex-col hidden lg:flex relative z-10">
-            <!-- Вкладки правой панели -->
+        <!-- Правая панель: Сведения о треке и Текст песен -->
+        <aside id="right-lyrics-panel" class="w-80 border-l flex flex-col hidden lg:flex relative z-10">
             <div class="p-4 border-b border-neutral-800 flex items-center justify-between">
                 <span class="font-bold text-sm tracking-wide text-neutral-300">Плеер & Слова</span>
                 <button onclick="toggleLyricsPanel()" class="text-neutral-500 hover:text-white transition-colors">
@@ -483,12 +547,10 @@
                 </button>
             </div>
 
-            <!-- Контент: Большой экран плеера + слова -->
             <div class="p-6 flex-1 flex flex-col justify-between overflow-y-auto space-y-6">
-                <!-- Мини-обложка -->
                 <div class="flex flex-col items-center text-center space-y-4">
                     <div class="w-40 h-40 rounded-2xl overflow-hidden shadow-2xl bg-neutral-950 border border-neutral-800">
-                        <img id="lyrics-track-cover" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop" alt="Cover" class="w-full h-full object-cover">
+                        <img id="lyrics-track-cover" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop" class="w-full h-full object-cover">
                     </div>
                     <div>
                         <h4 id="lyrics-track-title" class="font-extrabold text-lg line-clamp-1">Не играет трек</h4>
@@ -496,11 +558,9 @@
                     </div>
                 </div>
 
-                <!-- Поле с динамически скроллящимися словами -->
-                <div class="flex-1 bg-neutral-950/60 rounded-2xl border border-neutral-800/80 p-4 relative overflow-hidden flex flex-col">
+                <div class="flex-1 bg-neutral-950 rounded-2xl border border-neutral-800 p-4 relative overflow-hidden flex flex-col">
                     <div class="text-xs font-semibold text-neutral-500 mb-2 uppercase tracking-widest text-center">Синхронные слова</div>
                     <div id="lyrics-container" class="flex-1 overflow-y-auto pr-1 flex flex-col space-y-3 text-center justify-center text-sm scroll-smooth">
-                        <!-- Сюда вставляются слова -->
                         <p class="text-neutral-500 italic">Слова появятся при воспроизведении трека.</p>
                     </div>
                 </div>
@@ -509,56 +569,45 @@
     </div>
 
     <!-- Нижняя панель плеера -->
-    <footer class="fixed bottom-0 left-0 right-0 h-24 bg-neutral-900/95 backdrop-blur-md border-t border-neutral-800/80 px-6 py-4 flex items-center justify-between z-40 shadow-2xl">
-        <!-- Левая часть: информация о текущем треке -->
+    <footer class="fixed bottom-0 left-0 right-0 h-24 border-t px-6 py-4 flex items-center justify-between z-40 shadow-2xl">
         <div class="flex items-center space-x-4 w-1/3 min-w-0">
             <div class="relative w-14 h-14 rounded-xl overflow-hidden shadow-md flex-shrink-0 bg-neutral-950 border border-neutral-800 group">
-                <img id="current-track-cover" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=100&auto=format&fit=crop" alt="Track Cover" class="w-full h-full object-cover">
+                <img id="current-track-cover" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=100&auto=format&fit=crop" class="w-full h-full object-cover">
                 <div onclick="toggleLyricsPanel()" class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
                     <i class="fa-solid fa-eye text-white text-sm"></i>
                 </div>
             </div>
             <div class="min-w-0">
-                <h4 id="current-track-title" class="font-bold text-sm md:text-base text-white truncate">Не выбран трек</h4>
+                <h4 id="current-track-title" class="font-bold text-sm md:text-base truncate">Не выбран трек</h4>
                 <p id="current-track-artist" class="text-xs text-neutral-400 truncate mt-0.5">Пожалуйста, выберите композицию</p>
                 <p id="current-track-id" class="text-[9px] text-neutral-600 font-mono truncate">ID: нет</p>
             </div>
-            <!-- Кнопка избранного в плеере -->
             <button id="player-favorite-btn" onclick="toggleFavoriteCurrent()" class="text-neutral-500 hover:text-rose-500 active:scale-90 transition-all ml-2 flex-shrink-0">
                 <i id="favorite-heart-icon" class="fa-solid fa-heart text-xl"></i>
             </button>
         </div>
 
-        <!-- Центральная часть: кнопки управления & прогресс-бар -->
         <div class="flex flex-col items-center w-1/3 space-y-2">
-            <!-- Кнопки управления плеером -->
             <div class="flex items-center space-x-6">
-                <!-- Shuffle -->
-                <button id="shuffle-btn" onclick="toggleShuffle()" class="text-neutral-500 hover:text-white transition-colors" title="Перемешать">
+                <button id="shuffle-btn" onclick="toggleShuffle()" class="text-neutral-500 hover:text-violet-500 transition-colors">
                     <i class="fa-solid fa-shuffle text-sm"></i>
                 </button>
-                <!-- Prev -->
-                <button onclick="prevTrack()" class="text-neutral-400 hover:text-white active:scale-90 transition-all" title="Назад">
+                <button onclick="prevTrack()" class="text-neutral-400 hover:text-violet-500 active:scale-90 transition-all">
                     <i class="fa-solid fa-backward-step text-lg"></i>
                 </button>
-                <!-- Play/Pause -->
-                <button id="main-play-btn" onclick="togglePlay()" class="w-12 h-12 bg-white hover:bg-neutral-100 text-neutral-950 rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all duration-300" title="Воспроизведение/Пауза">
+                <button id="main-play-btn" onclick="togglePlay()" class="w-12 h-12 bg-white hover:bg-neutral-100 rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all duration-300">
                     <i id="play-icon-svg" class="fa-solid fa-play text-lg text-black"></i>
                 </button>
-                <!-- Next -->
-                <button onclick="nextTrack()" class="text-neutral-400 hover:text-white active:scale-90 transition-all" title="Вперед">
+                <button onclick="nextTrack()" class="text-neutral-400 hover:text-violet-500 active:scale-90 transition-all">
                     <i class="fa-solid fa-forward-step text-lg"></i>
                 </button>
-                <!-- Repeat -->
-                <button id="repeat-btn" onclick="toggleRepeat()" class="text-neutral-500 hover:text-white transition-colors" title="Повторять">
+                <button id="repeat-btn" onclick="toggleRepeat()" class="text-neutral-500 hover:text-violet-500 transition-colors">
                     <i class="fa-solid fa-repeat text-sm"></i>
                 </button>
             </div>
 
-            <!-- Прогресс-бар с таймерами -->
             <div class="flex items-center space-x-3 w-full max-w-md text-xs text-neutral-400">
                 <span id="current-time">0:00</span>
-                <!-- Слайдер таймлайна -->
                 <div class="relative flex-1 group h-4 flex items-center cursor-pointer" id="timeline-container" onclick="seekAudio(event)">
                     <div class="w-full bg-neutral-800 h-1 rounded-full group-hover:h-1.5 transition-all">
                         <div id="timeline-progress" class="bg-gradient-to-r from-violet-500 to-indigo-500 h-full rounded-full relative w-0">
@@ -570,22 +619,17 @@
             </div>
         </div>
 
-        <!-- Правая часть: Управление громкостью, визуализатором и разворачиванием слов -->
         <div class="flex items-center justify-end w-1/3 space-x-4">
-            <!-- Кнопка добавления в плейлист -->
             <button onclick="triggerAddToPlaylist()" class="text-neutral-400 hover:text-violet-400 transition-colors" title="Добавить в плейлист">
                 <i class="fa-solid fa-folder-plus text-lg"></i>
             </button>
             <button onclick="triggerRemoveFromPlaylist()" class="text-neutral-400 hover:text-rose-400 transition-colors" title="Убрать из плейлиста">
                 <i class="fa-solid fa-folder-minus text-lg"></i>
             </button>
-
-            <!-- Кнопка показа слов -->
-            <button id="lyrics-btn-toggle" onclick="toggleLyricsWithState()" class="text-neutral-400 hover:text-violet-400 transition-colors text-lg" title="Показать слова">
+            <button id="lyrics-btn-toggle" onclick="toggleLyricsPanel()" class="text-neutral-400 hover:text-violet-400 transition-colors text-lg" title="Показать слова">
                 <i class="fa-solid fa-quote-right"></i>
             </button>
             
-            <!-- Громкость -->
             <div class="flex items-center space-x-2 w-28 md:w-32">
                 <button id="volume-toggle-btn" onclick="toggleMute()" class="text-neutral-400 hover:text-white transition-colors">
                     <i id="volume-icon" class="fa-solid fa-volume-high text-sm"></i>
@@ -601,48 +645,46 @@
         </div>
     </footer>
 
-    <!-- Аутентификация: Вход / Регистрация -->
+    <!-- Аутентификация -->
     <div id="auth-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center">
         <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-md p-8 space-y-6 m-4 shadow-2xl relative">
-            
             <div class="text-center space-y-2">
                 <div class="w-12 h-12 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto">
                     <i class="fa-solid fa-music text-white text-2xl"></i>
                 </div>
-                <h3 id="auth-title" class="text-2xl font-black tracking-tight">Вход в SoundWave</h3>
-                <p id="auth-subtitle" class="text-xs text-neutral-400">Добро пожаловать в мир безграничной музыки</p>
+                <h3 id="auth-title" class="text-2xl font-black text-white">Вход в SoundWave</h3>
+                <p id="auth-subtitle" class="text-xs text-neutral-400">Погрузитесь в бесконечный мир музыки</p>
             </div>
 
-            <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
-                <!-- Блоки для регистрации -->
+            <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4 text-white">
                 <div id="auth-reg-fields" class="space-y-4 hidden">
                     <div>
                         <label class="block text-xs text-neutral-400 font-semibold mb-1">Ваше имя</label>
-                        <input type="text" id="reg-name" placeholder="Дмитрий" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-600 text-white text-sm">
+                        <input type="text" id="reg-name" placeholder="Дмитрий" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-violet-600 text-sm">
                     </div>
                     <div>
                         <label class="block text-xs text-neutral-400 font-semibold mb-1">Username (Уникальный)</label>
-                        <input type="text" id="reg-username" oninput="checkUsernameUnique(this.value)" placeholder="dmitry123" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-600 text-white text-sm">
+                        <input type="text" id="reg-username" oninput="checkUsernameUnique(this.value)" placeholder="dmitry123" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-violet-600 text-sm">
                         <span id="reg-username-status" class="text-[10px] mt-1 block font-bold text-neutral-500">Введите юзернейм</span>
                     </div>
                 </div>
 
                 <div>
                     <label class="block text-xs text-neutral-400 font-semibold mb-1">Эл. почта</label>
-                    <input type="email" id="auth-email" placeholder="example@mail.ru" required class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-600 text-white text-sm">
+                    <input type="email" id="auth-email" placeholder="example@mail.ru" required class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-violet-600 text-sm">
                 </div>
 
                 <div>
                     <label class="block text-xs text-neutral-400 font-semibold mb-1">Пароль</label>
-                    <input type="password" id="auth-password" placeholder="••••••••" required class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-600 text-white text-sm">
+                    <input type="password" id="auth-password" placeholder="••••••••" required class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-violet-600 text-sm">
                 </div>
 
                 <div id="auth-repeat-password-field" class="hidden">
                     <label class="block text-xs text-neutral-400 font-semibold mb-1">Повторите пароль</label>
-                    <input type="password" id="auth-password-repeat" placeholder="••••••••" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-600 text-white text-sm">
+                    <input type="password" id="auth-password-repeat" placeholder="••••••••" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-violet-600 text-sm">
                 </div>
 
-                <button type="submit" id="auth-submit-btn" class="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg active:scale-95 text-sm">Войти в систему</button>
+                <button type="submit" id="auth-submit-btn" class="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg text-sm">Войти</button>
             </form>
 
             <div class="text-center">
@@ -658,62 +700,62 @@
                 <i class="fa-solid fa-envelope-circle-check text-3xl"></i>
             </div>
             <div class="space-y-2">
-                <h3 class="text-xl font-bold">Подтверждение почты</h3>
-                <p class="text-sm text-neutral-400 leading-relaxed">Мы отправили письмо для подтверждения на указанную почту. Пожалуйста, перейдите по ссылке в письме и нажмите кнопку ниже.</p>
+                <h3 class="text-xl font-bold text-white">Подтверждение почты</h3>
+                <p class="text-sm text-neutral-400 leading-relaxed">Мы отправили письмо для верификации на вашу почту. Пожалуйста, перейдите по ссылке в письме и нажмите кнопку ниже.</p>
             </div>
-            <button onclick="checkEmailVerifiedStatus()" class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl transition-all active:scale-95 text-sm">Я подтвердил почту</button>
+            <button onclick="checkEmailVerifiedStatus()" class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-sm">Я подтвердил почту</button>
         </div>
     </div>
 
     <!-- Модальное окно создания Плейлиста -->
-    <div id="playlist-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
-        <div class="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-6 space-y-4 m-4">
+    <div id="playlist-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-6 space-y-4 m-4 text-white">
             <h3 class="text-xl font-bold">Создать новый плейлист</h3>
             <div class="space-y-3">
                 <div>
                     <label class="block text-xs text-neutral-400 font-semibold mb-1">Название плейлиста</label>
-                    <input type="text" id="playlist-name-input" placeholder="Любимое для работы..." class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-600 text-white text-sm">
+                    <input type="text" id="playlist-name-input" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-violet-600 text-sm">
                 </div>
                 <div>
-                    <label class="block text-xs text-neutral-400 font-semibold mb-1">Описание (необязательно)</label>
-                    <textarea id="playlist-desc-input" placeholder="Музыка, повышающая концентрацию..." rows="3" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-600 text-white resize-none text-sm"></textarea>
+                    <label class="block text-xs text-neutral-400 font-semibold mb-1">Описание</label>
+                    <textarea id="playlist-desc-input" rows="2" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-violet-600 text-sm resize-none"></textarea>
                 </div>
                 <div>
-                    <label class="block text-xs text-neutral-400 font-semibold mb-1">Обложка плейлиста (ссылка или файл)</label>
-                    <input type="text" id="playlist-cover-input" placeholder="https://unsplash.com/..." class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-600 text-white text-sm">
+                    <label class="block text-xs text-neutral-400 font-semibold mb-1">Обложка плейлиста (URL картинки)</label>
+                    <input type="text" id="playlist-cover-input" placeholder="https://unsplash.com/..." class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none text-sm">
                 </div>
                 <div>
                     <label class="block text-xs text-neutral-400 font-semibold mb-1">Приватность</label>
-                    <select id="playlist-privacy" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none text-white text-sm">
+                    <select id="playlist-privacy" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none text-sm text-white">
                         <option value="public">Публичный (виден всем в вашем профиле)</option>
                         <option value="private">Приватный (только для вас)</option>
                     </select>
                 </div>
             </div>
             <div class="flex items-center justify-end space-x-3 pt-2">
-                <button onclick="closeCreatePlaylistModal()" class="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">Отмена</button>
-                <button onclick="saveNewPlaylist()" class="px-5 py-2 text-sm bg-violet-600 hover:bg-violet-700 rounded-xl font-semibold transition-all">Создать</button>
+                <button onclick="closeCreatePlaylistModal()" class="px-4 py-2 text-sm text-neutral-400 hover:text-white">Отмена</button>
+                <button onclick="saveNewPlaylist()" class="px-5 py-2 text-sm bg-violet-600 hover:bg-violet-700 rounded-xl font-semibold">Создать</button>
             </div>
         </div>
     </div>
 
     <!-- Модальное окно выкладывания трека -->
     <div id="upload-track-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-md p-6 space-y-4 m-4">
-            <h3 class="text-xl font-bold text-white"><i class="fa-solid fa-music text-violet-500 mr-2"></i> Выложить свой трек</h3>
+        <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-md p-6 space-y-4 m-4 text-white">
+            <h3 class="text-xl font-bold"><i class="fa-solid fa-music text-violet-500 mr-2"></i> Выложить свой трек</h3>
             
             <div class="space-y-3">
                 <div>
                     <label class="block text-xs text-neutral-400 font-semibold mb-1">Название трека</label>
-                    <input type="text" id="track-upload-title" placeholder="Cyberpunk Dream" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-600 text-white text-sm">
+                    <input type="text" id="track-upload-title" placeholder="Cyberpunk Dream" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-violet-600 text-sm text-white">
                 </div>
                 <div>
                     <label class="block text-xs text-neutral-400 font-semibold mb-1">Исполнитель</label>
-                    <input type="text" id="track-upload-artist" placeholder="Оставьте пустым, чтобы указать себя" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-600 text-white text-sm">
+                    <input type="text" id="track-upload-artist" placeholder="Укажите автора или оставьте пустым (будете вы)" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-violet-600 text-sm text-white">
                 </div>
                 <div>
                     <label class="block text-xs text-neutral-400 font-semibold mb-1">Обложка (URL картинки)</label>
-                    <input type="text" id="track-upload-cover" placeholder="https://unsplash.com/... (отправится модератору)" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-600 text-white text-sm">
+                    <input type="text" id="track-upload-cover" placeholder="https://images.unsplash.com/..." class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-1 focus:ring-violet-600 text-sm text-white">
                 </div>
                 <div>
                     <label class="block text-xs text-neutral-400 font-semibold mb-1">Аудио-файл (MP3)</label>
@@ -722,86 +764,57 @@
             </div>
 
             <div class="flex items-center justify-end space-x-3 pt-2">
-                <button onclick="closeUploadTrackModal()" class="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">Отмена</button>
-                <button onclick="submitNewTrack()" class="px-5 py-2 text-sm bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl font-semibold text-white transition-all">Выложить трек</button>
+                <button onclick="closeUploadTrackModal()" class="px-4 py-2 text-sm text-neutral-400 hover:text-white">Отмена</button>
+                <button onclick="submitNewTrack()" class="px-5 py-2 text-sm bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl font-semibold">Выложить</button>
             </div>
         </div>
     </div>
 
-    <!-- Модальное окно тарифов подписки -->
+    <!-- Модальное окно лимитов и тарифов подписки -->
     <div id="subscription-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
-        <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-2xl p-6 md:p-8 space-y-6 m-4 overflow-y-auto max-h-[90vh]">
+        <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-2xl p-6 md:p-8 space-y-6 m-4 overflow-y-auto max-h-[90vh] text-white">
             <div class="text-center space-y-2">
-                <h3 class="text-2xl font-extrabold tracking-tight text-amber-400"><i class="fa-solid fa-crown mr-2"></i> Улучшите возможности до максимума</h3>
-                <p class="text-sm text-neutral-400">Преодолевайте лимиты и выкладывайте больше авторской музыки</p>
+                <h3 class="text-2xl font-extrabold text-amber-400"><i class="fa-solid fa-crown mr-2"></i> Премиум Возможности</h3>
+                <p id="subscription-limit-alert" class="text-sm text-rose-400 font-bold hidden">Лимит исчерпан,купите подписку ISP+ или AUT++</p>
             </div>
 
-            <!-- Тарифные карточки -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                 <!-- ISP+ -->
-                <div class="bg-neutral-950/60 border border-neutral-800 hover:border-violet-500/50 rounded-2xl p-6 space-y-4 relative flex flex-col justify-between">
+                <div class="bg-neutral-950 border border-neutral-800 hover:border-violet-500 rounded-2xl p-6 space-y-4 flex flex-col justify-between">
                     <div>
                         <span class="px-2.5 py-1 bg-violet-600/10 text-violet-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-violet-500/20">Премиум Пакет</span>
                         <h4 class="text-xl font-bold mt-2">ISP+</h4>
-                        <p class="text-xs text-neutral-400 mt-1">До 10 загрузок авторских треков за 5 дней. Премиальный статус.</p>
+                        <p class="text-xs text-neutral-400 mt-1">До 7 загрузок треков за 5 дней. Сниженная реклама.</p>
                     </div>
-                    <div class="pt-4 space-y-2">
-                        <div class="flex justify-between items-center text-sm">
-                            <span class="text-neutral-400">1 Месяц:</span>
-                            <span class="font-bold text-white">250 рублей</span>
-                        </div>
-                        <div class="flex justify-between items-center text-sm">
-                            <span class="text-neutral-400">3 Месяца:</span>
-                            <span class="font-bold text-white">450 рублей</span>
-                        </div>
-                        <div class="flex justify-between items-center text-sm">
-                            <span class="text-neutral-400">6 Месяцев:</span>
-                            <span class="font-bold text-white">800 рублей</span>
-                        </div>
-                    </div>
-                    <button onclick="selectSubscriptionPlan('ISP+')" class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl transition-all text-sm mt-4">Выбрать ISP+</button>
+                    <button onclick="selectSubscriptionPlan('ISP+')" class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-sm">Выбрать ISP+</button>
                 </div>
 
                 <!-- AUT++ -->
-                <div class="bg-neutral-950/60 border border-amber-500/20 hover:border-amber-500/50 rounded-2xl p-6 space-y-4 relative flex flex-col justify-between">
+                <div class="bg-neutral-950 border border-neutral-800 hover:border-amber-500 rounded-2xl p-6 space-y-4 flex flex-col justify-between">
                     <div>
                         <span class="px-2.5 py-1 bg-amber-500/10 text-amber-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-amber-500/20">Профессионал</span>
                         <h4 class="text-xl font-bold mt-2">AUT++</h4>
-                        <p class="text-xs text-neutral-400 mt-1">До 30 загрузок авторских треков за 5 дней. Максимальные права.</p>
+                        <p class="text-xs text-neutral-400 mt-1">Безлимитные загрузки, смена юзернейма, полное отсутствие рекламы.</p>
                     </div>
-                    <div class="pt-4 space-y-2">
-                        <div class="flex justify-between items-center text-sm">
-                            <span class="text-neutral-400">1 Месяц:</span>
-                            <span class="font-bold text-white">500 рублей</span>
-                        </div>
-                        <div class="flex justify-between items-center text-sm">
-                            <span class="text-neutral-400">3 Месяца:</span>
-                            <span class="font-bold text-white">980 рублей</span>
-                        </div>
-                        <div class="flex justify-between items-center text-sm">
-                            <span class="text-neutral-400">6 Месяцев:</span>
-                            <span class="font-bold text-white">1500 рублей</span>
-                        </div>
-                    </div>
-                    <button onclick="selectSubscriptionPlan('AUT++')" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold rounded-xl transition-all text-sm mt-4">Выбрать AUT++</button>
+                    <button onclick="selectSubscriptionPlan('AUT++')" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold rounded-xl text-sm">Выбрать AUT++</button>
                 </div>
             </div>
 
-            <!-- Блок оплаты (открывается при выборе плана) -->
+            <!-- Блок оплаты -->
             <div id="payment-block" class="bg-neutral-950 p-6 border border-neutral-800 rounded-2xl space-y-4 hidden">
-                <h4 class="font-bold text-white text-sm">Оформление подписки <span id="payment-selected-plan" class="text-violet-400 font-extrabold">ISP+</span></h4>
+                <h4 class="font-bold">Оформление <span id="payment-selected-plan" class="text-violet-400 font-extrabold">...</span></h4>
                 <div class="grid grid-cols-3 gap-3">
-                    <button id="period-1m-btn" onclick="selectPeriod(1)" class="p-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-xs font-bold text-center">1 Месяц</button>
-                    <button id="period-3m-btn" onclick="selectPeriod(3)" class="p-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-xs font-bold text-center">3 Месяца</button>
-                    <button id="period-6m-btn" onclick="selectPeriod(6)" class="p-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-xs font-bold text-center">6 Месяцев</button>
+                    <button id="period-1m-btn" onclick="selectPeriod(1)" class="p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-bold text-center">1 Месяц</button>
+                    <button id="period-3m-btn" onclick="selectPeriod(3)" class="p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-bold text-center">3 Месяца</button>
+                    <button id="period-6m-btn" onclick="selectPeriod(6)" class="p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-bold text-center">6 Месяцев</button>
                 </div>
                 <div class="flex justify-between items-center text-sm pt-2">
-                    <span class="text-neutral-400">Итого к оплате:</span>
-                    <span id="payment-total-price" class="text-xl font-extrabold text-white">0 рублей</span>
+                    <span class="text-neutral-400">Итого:</span>
+                    <span id="payment-total-price" class="text-xl font-extrabold text-white">0 руб.</span>
                 </div>
                 <div class="grid grid-cols-2 gap-4 pt-4">
                     <button onclick="payWithCard()" class="py-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl font-bold text-sm text-neutral-300">Оплата картой</button>
-                    <button onclick="triggerPromoCode()" class="py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl font-bold text-sm text-white">Активировать промокод</button>
+                    <button onclick="triggerPromoCode()" class="py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl font-bold text-sm">Промокод</button>
                 </div>
             </div>
 
@@ -811,32 +824,93 @@
         </div>
     </div>
 
+    <!-- Модальное окно Инфо по подпискам -->
+    <div id="info-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-xl p-6 m-4 text-white overflow-y-auto max-h-[85vh] space-y-4">
+            <h3 class="text-xl font-bold text-indigo-400">Сравнение планов подписки</h3>
+            <div class="space-y-4 text-xs divide-y divide-neutral-800">
+                <div class="pt-2">
+                    <h4 class="font-bold text-neutral-200">FREE — 0 рублей/месяц</h4>
+                    <p class="text-green-400">+ Бесплатный запуск</p>
+                    <p class="text-green-400">+ Смена имени бесплатно</p>
+                    <p class="text-rose-400">- Реклама (50 секунд) после каждого трека</p>
+                    <p class="text-rose-400">- Нельзя сменить юзернейм</p>
+                    <p class="text-rose-400">- Нельзя сменить аватарку</p>
+                    <p class="text-rose-400">- Загрузка: максимум 2 трека в 5 дней</p>
+                    <p class="text-rose-400">- Ограничение на плейлисты (макс. 3)</p>
+                </div>
+                <div class="pt-4">
+                    <h4 class="font-bold text-violet-400">ISP+</h4>
+                    <p class="text-green-400">+ Как во free подписке</p>
+                    <p class="text-green-400">+ Можно сменить аватарку (модерация)</p>
+                    <p class="text-green-400">+ Загрузка: максимум 7 треков в 5 дней</p>
+                    <p class="text-rose-400">- Реклама (30 секунд) после каждого 4-го трека</p>
+                    <p class="text-rose-400">- Ограничение на плейлисты (макс. 6)</p>
+                    <p class="text-rose-400">- Нельзя сменить юзернейм</p>
+                </div>
+                <div class="pt-4">
+                    <h4 class="font-bold text-amber-400">AUT++</h4>
+                    <p class="text-green-400">+ Возможности Free и ISP+</p>
+                    <p class="text-green-400">+ Смена юзернейма раз в 5 дней</p>
+                    <p class="text-green-400">+ Повышенная монетизация и статус</p>
+                    <p class="text-green-400">+ Полное отсутствие рекламы</p>
+                    <p class="text-green-400">+ Нет никаких лимитов на плейлисты и загрузки!</p>
+                </div>
+            </div>
+            <button onclick="closeInfoModal()" class="w-full mt-4 py-2 bg-neutral-800 hover:bg-neutral-700 rounded-xl text-xs font-bold text-neutral-300">Понятно</button>
+        </div>
+    </div>
+
+    <!-- Модальное окно жалоб (Пожаловаться) -->
+    <div id="complaint-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-md p-6 m-4 text-white space-y-4">
+            <h3 class="text-lg font-bold text-rose-500">Сообщить о проблеме</h3>
+            <p class="text-xs text-neutral-400">Ваше сообщение напрямую отправится администратору.</p>
+            <textarea id="complaint-textarea" rows="4" placeholder="Опишите баг, ошибку или жалобу..." class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-rose-500 resize-none text-white"></textarea>
+            <div class="flex justify-end space-x-2 pt-2 text-sm">
+                <button onclick="closeComplaintModal()" class="px-4 py-2 text-neutral-400">Отмена</button>
+                <button onclick="submitComplaint()" class="px-5 py-2 bg-rose-600 hover:bg-rose-500 rounded-xl font-bold">Отправить</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Модальное окно промокодов -->
     <div id="promo-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center hidden">
-        <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-sm p-6 space-y-4 m-4">
-            <h3 class="text-xl font-bold text-white">Активация промокода</h3>
-            <p class="text-xs text-neutral-400">Введите ваш одноразовый промокод, сгенерированный администратором платформы.</p>
-            <input type="text" id="promo-input-code" placeholder="SW-ISP-1M-XXXXXX" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-center font-mono focus:outline-none focus:ring-1 focus:ring-violet-600 text-white">
-            <button onclick="submitPromoCode()" class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl transition-all">Активировать</button>
+        <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-sm p-6 space-y-4 m-4 text-white">
+            <h3 class="text-xl font-bold">Активация промокода</h3>
+            <input type="text" id="promo-input-code" placeholder="SW-ISP-1M-XXXXXX" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-center font-mono text-white">
+            <button onclick="submitPromoCode()" class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-sm">Активировать</button>
             <button onclick="closePromoModal()" class="w-full py-2 text-xs text-neutral-500 hover:text-neutral-400">Отмена</button>
         </div>
     </div>
 
-    <!-- Системные уведомления (Toast) -->
-    <div id="toast-container" class="fixed bottom-28 right-6 z-50 space-y-2 max-w-sm pointer-events-none">
-        <!-- Уведомления появляются динамически -->
+    <!-- Непропускаемый рекламный блок-экран (Защищен от перезапуска страницы) -->
+    <div id="ad-blocker-overlay" class="fixed inset-0 bg-black/98 z-[100] flex flex-col items-center justify-center text-center p-6 space-y-6 hidden">
+        <div class="w-20 h-20 bg-violet-600/10 border border-violet-500/30 rounded-3xl flex items-center justify-center animate-bounce text-violet-400">
+            <i class="fa-solid fa-rectangle-ad text-4xl"></i>
+        </div>
+        <div class="space-y-2 max-w-md">
+            <h2 class="text-2xl font-black text-white">Идет реклама</h2>
+            <p class="text-sm text-neutral-400 leading-relaxed">Пожалуйста, подождите. Обход рекламы заблокирован. Вы можете навсегда отключить ее, купив подписку AUT++!</p>
+        </div>
+        <div class="text-6xl font-black text-violet-500 font-mono" id="ad-timer-countdown">50</div>
+        <button onclick="openSubscriptionModal()" class="px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-neutral-950 font-black rounded-full text-xs hover:scale-105 active:scale-95 transition-all shadow-lg">КУПИТЬ AUT++ (УБРАТЬ РЕКЛАМУ)</button>
     </div>
 
-    <!-- Теневой элемент Audio -->
+    <!-- Системные уведомления (Toast) -->
+    <div id="toast-container" class="fixed bottom-28 right-6 z-50 space-y-2 max-w-sm pointer-events-none">
+        <!-- Динамически -->
+    </div>
+
+    <!-- Аудио плеер -->
     <audio id="audio-player"></audio>
 
-    <!-- Подключение Firebase (Modular SDK 11.6.1) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, updateProfile, onAuthStateChanged, signOut, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, getDocs, onSnapshot, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, getDocs, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Ваша конфигурация базы данных jopa-2e821
+        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyChKHSF7LqqDYJp5MokCbCMn9gdoSDdXgA",
             authDomain: "jopa-2e821.firebaseapp.com",
@@ -855,8 +929,7 @@
             auth = getAuth(firebaseApp);
             db = getFirestore(firebaseApp);
         } catch (err) {
-            console.error("Ошибка при инициализации Firebase:", err);
-            window.showToast("⚠️ Ошибка подключения к базе данных");
+            console.error("Ошибка Firebase:", err);
         }
 
         let currentUser = null;
@@ -872,8 +945,9 @@
         let messages = [];
         let currentUploadPlan = "ISP+";
         let currentUploadPeriod = 1;
+        let playedTracksSessionCount = 0; // Для подсчета рекламы в ISP+
 
-        // Вспомогательная транслитерация (кириллица -> латиница) для расширенного поиска
+        // Транслитерация для поиска
         function transliterate(text) {
             const rus = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
             const lat = ["a","b","v","g","d","e","e","zh","z","i","y","k","l","m","n","o","p","r","s","t","u","f","h","ts","ch","sh","shch","","y","","e","yu","ya"];
@@ -887,6 +961,9 @@
         }
 
         window.onload = async function() {
+            // Инициализация принудительного рекламного локального хранилища
+            checkActiveAdTimer();
+
             if (auth) {
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
@@ -894,7 +971,6 @@
                             await loadUserProfile(user);
                             document.getElementById('auth-modal').classList.add('hidden');
                         } else {
-                            // Ожидаем верификации почты
                             document.getElementById('auth-modal').classList.add('hidden');
                             document.getElementById('verify-modal').classList.remove('hidden');
                         }
@@ -909,7 +985,7 @@
             renderFavoritesList();
         };
 
-        // Загрузка профиля пользователя из Firestore
+        // Загрузка профиля пользователя
         async function loadUserProfile(user) {
             if (!db) return;
             const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', user.uid);
@@ -918,7 +994,6 @@
             if (userDoc.exists()) {
                 currentUser = userDoc.data();
             } else {
-                // Новый пользователь
                 currentUser = {
                     uid: user.uid,
                     name: user.displayName || "Новый слушатель",
@@ -936,7 +1011,7 @@
                 await setDoc(userDocRef, currentUser);
             }
 
-            // Проверка сброса лимита по времени
+            // Сброс лимитов в 00:00 по МСК
             if (Date.now() > currentUser.limitResetTime) {
                 currentUser.tracksUploadedCount = 0;
                 currentUser.limitResetTime = getNextMskReset();
@@ -946,20 +1021,20 @@
                 });
             }
 
-            // Рендер полей в UI
             updateProfileUI();
             listenToDatabaseUpdates();
         }
 
+        // 00:00 МСК
         function getNextMskReset() {
             const now = new Date();
-            const mskOffset = 3 * 60 * 60 * 1000;
+            const mskOffset = 3 * 60 * 60 * 1000; // МСК +3
             const mskTime = new Date(now.getTime() + mskOffset);
             mskTime.setUTCHours(0, 0, 0, 0);
             return mskTime.getTime() - mskOffset + (5 * 24 * 60 * 60 * 1000);
         }
 
-        // Обновление интерфейса профиля
+        // Обновление лимитов и полей в UI
         function updateProfileUI() {
             if (!currentUser) return;
             document.getElementById('profile-nickname').innerText = currentUser.name;
@@ -967,14 +1042,12 @@
             document.getElementById('profile-joined-date').innerText = currentUser.joinedAt;
             document.getElementById('profile-avatar-img').src = currentUser.avatar;
 
-            // Индикатор модерации
             if (currentUser.avatarStatus === 'pending') {
                 document.getElementById('avatar-moderation-badge').classList.remove('hidden');
             } else {
                 document.getElementById('avatar-moderation-badge').classList.add('hidden');
             }
 
-            // Тарифный статус
             const subBadge = document.getElementById('profile-subscription-badge');
             subBadge.innerText = currentUser.subscriptionPlan;
             if (currentUser.subscriptionPlan !== 'Free') {
@@ -983,13 +1056,21 @@
                 subBadge.className = "px-3 py-1 bg-neutral-800 text-neutral-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-neutral-700";
             }
 
-            // Лимиты загрузок
-            const limitMax = currentUser.subscriptionPlan === 'Free' ? 2 : (currentUser.subscriptionPlan === 'ISP+' ? 10 : 30);
-            const remaining = Math.max(0, limitMax - currentUser.tracksUploadedCount);
-            const limitText = `${remaining}/${limitMax}`;
-            document.getElementById('sidebar-limit-text').innerText = limitText;
+            // Расчет лимитов
+            const uploadLimitText = document.getElementById('sidebar-limit-text');
+            if (currentUser.email === 'sobakastalina123@gmail.com') {
+                uploadLimitText.innerText = "Безлимит";
+            } else {
+                const limitMax = currentUser.subscriptionPlan === 'Free' ? 2 : (currentUser.subscriptionPlan === 'ISP+' ? 7 : Infinity);
+                if (limitMax === Infinity) {
+                    uploadLimitText.innerText = "Безлимит";
+                } else {
+                    const remaining = Math.max(0, limitMax - currentUser.tracksUploadedCount);
+                    uploadLimitText.innerText = `${remaining}/${limitMax}`;
+                }
+            }
 
-            // Доступ к панели админа
+            // Управление отображением админки
             if (currentUser.email === 'sobakastalina123@gmail.com') {
                 document.getElementById('nav-admin').classList.remove('hidden');
             } else {
@@ -997,19 +1078,17 @@
             }
         }
 
-        // Переключение режимов Войти / Зарегистрироваться
         let isRegisterMode = false;
         window.toggleAuthMode = function() {
             isRegisterMode = !isRegisterMode;
             document.getElementById('auth-title').innerText = isRegisterMode ? "Регистрация в SoundWave" : "Вход в SoundWave";
-            document.getElementById('auth-subtitle').innerText = isRegisterMode ? "Создайте аккаунт, чтобы слушать и выкладывать музыку" : "Добро пожаловать в мир безграничной музыки";
+            document.getElementById('auth-subtitle').innerText = isRegisterMode ? "Создайте аккаунт, чтобы слушать и выкладывать музыку" : "Погрузитесь в бесконечный мир музыки";
             document.getElementById('auth-reg-fields').classList.toggle('hidden', !isRegisterMode);
             document.getElementById('auth-repeat-password-field').classList.toggle('hidden', !isRegisterMode);
-            document.getElementById('auth-submit-btn').innerText = isRegisterMode ? "Зарегистрироваться" : "Войти в систему";
+            document.getElementById('auth-submit-btn').innerText = isRegisterMode ? "Зарегистрироваться" : "Войти";
             document.getElementById('auth-toggle-link').innerText = isRegisterMode ? "Уже есть аккаунт? Войдите" : "Еще нет аккаунта? Зарегистрируйтесь";
         };
 
-        // Валидация юзернейма на лету
         window.checkUsernameUnique = async function(username) {
             const statusEl = document.getElementById('reg-username-status');
             if (username.length < 3) {
@@ -1019,12 +1098,15 @@
             }
             if (!db) return;
             
-            const q = query(
-                collection(db, 'artifacts', defaultAppId, 'public', 'data', 'users'),
-                where("username", "==", username.trim().toLowerCase())
-            );
-            const snapshot = await getDocs(q);
-            if (!snapshot.empty) {
+            const usersSnapshot = await getDocs(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'users'));
+            let isTaken = false;
+            usersSnapshot.forEach(doc => {
+                if (doc.data().username === username.trim().toLowerCase()) {
+                    isTaken = true;
+                }
+            });
+
+            if (isTaken) {
                 statusEl.innerText = "username занят";
                 statusEl.className = "text-[10px] mt-1 block font-bold text-rose-500";
             } else {
@@ -1033,14 +1115,8 @@
             }
         };
 
-        // Обработка отправки формы Входа / Регистрации
         window.handleAuthSubmit = async function(event) {
             event.preventDefault();
-            if (!auth) {
-                window.showToast("⚠️ Firebase не инициализирован");
-                return;
-            }
-
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
 
@@ -1050,7 +1126,7 @@
                 const passwordRepeat = document.getElementById('auth-password-repeat').value;
 
                 if (!name || !username) {
-                    window.showToast("⚠️ Пожалуйста, заполните имя и юзернейм");
+                    window.showToast("⚠️ Заполните все поля!");
                     return;
                 }
                 if (password !== passwordRepeat) {
@@ -1058,13 +1134,10 @@
                     return;
                 }
 
-                // Создание пользователя
                 try {
                     const credentials = await createUserWithEmailAndPassword(auth, email, password);
-                    // Отправка реального письма верификации
                     await sendEmailVerification(credentials.user);
                     
-                    // Первоначальное создание профиля в Firestore
                     const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', credentials.user.uid);
                     await setDoc(userDocRef, {
                         uid: credentials.user.uid,
@@ -1083,85 +1156,88 @@
 
                     document.getElementById('auth-modal').classList.add('hidden');
                     document.getElementById('verify-modal').classList.remove('hidden');
-                    window.showToast("📧 Письмо для подтверждения отправлено!");
+                    window.showToast("📧 Ссылка отправлена на почту!");
                 } catch (e) {
-                    window.showToast("⚠️ Ошибка регистрации: " + e.message);
+                    window.showToast("⚠️ Ошибка: " + e.message);
                 }
             } else {
-                // Авторизация
                 try {
                     await signInWithEmailAndPassword(auth, email, password);
-                    window.showToast("🔐 Вход успешно выполнен!");
+                    window.showToast("🔐 Вы успешно вошли!");
                 } catch (e) {
-                    window.showToast("⚠️ Неверный логин или пароль");
+                    window.showToast("⚠️ Неверные данные входа");
                 }
             }
         };
 
-        // Проверка верификации почты по нажатию на кнопку
         window.checkEmailVerifiedStatus = async function() {
             if (!auth) return;
             await auth.currentUser.reload();
             if (auth.currentUser.emailVerified || auth.currentUser.email === 'sobakastalina123@gmail.com') {
                 document.getElementById('verify-modal').classList.add('hidden');
                 await loadUserProfile(auth.currentUser);
-                window.showToast("🎉 Добро пожаловать на SoundWave!");
+                window.showToast("🎉 Почта успешно подтверждена!");
             } else {
-                window.showToast("⚠️ Почта ещё не подтверждена! Проверьте спам.");
+                window.showToast("⚠️ Письмо не подтверждено!");
             }
         };
 
-        // Смена никнейма
         window.triggerNicknameChange = async function() {
-            const newName = prompt("Введите новый никнейм:", currentUser.name);
+            const newName = prompt("Ваше новое имя:", currentUser.name);
             if (newName && newName.trim() !== "") {
                 currentUser.name = newName.trim();
-                const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid);
-                await updateDoc(userDocRef, { name: currentUser.name });
+                await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid), { name: currentUser.name });
                 updateProfileUI();
-                window.showToast("✅ Никнейм изменен!");
+                window.showToast("✅ Никнейм обновлен!");
             }
         };
 
-        // Смена юзернейма (раз в 3 дня)
         window.triggerUsernameChange = async function() {
-            const threeDays = 3 * 24 * 60 * 60 * 1000;
-            const now = Date.now();
-            if (currentUser.usernameChangedAt && (now - currentUser.usernameChangedAt < threeDays)) {
-                const diff = threeDays - (now - currentUser.usernameChangedAt);
-                const hoursLeft = Math.ceil(diff / (1000 * 60 * 60));
-                window.showToast(`⚠️ Изменение раз в 3 дня. Осталось: ${hoursLeft} ч.`);
+            if (currentUser.subscriptionPlan !== 'AUT++' && currentUser.email !== 'sobakastalina123@gmail.com') {
+                window.showToast("⚠️ Смена юзернейма доступна только на AUT++!");
                 return;
             }
 
-            const newUsername = prompt("Введите новый юзернейм (@):", currentUser.username);
+            const fiveDays = 5 * 24 * 60 * 60 * 1000;
+            const now = Date.now();
+            if (currentUser.usernameChangedAt && (now - currentUser.usernameChangedAt < fiveDays)) {
+                const diff = fiveDays - (now - currentUser.usernameChangedAt);
+                const hrs = Math.ceil(diff / (1000 * 60 * 60));
+                window.showToast(`⚠️ Изменять юзернейм можно раз в 5 дней. Осталось: ${hrs} ч.`);
+                return;
+            }
+
+            const newUsername = prompt("Ваш новый уникальный @username:", currentUser.username);
             if (!newUsername) return;
             const cleanUser = newUsername.trim().toLowerCase();
-            
-            // Проверка занятости
-            const q = query(
-                collection(db, 'artifacts', defaultAppId, 'public', 'data', 'users'),
-                where("username", "==", cleanUser)
-            );
-            const snapshot = await getDocs(q);
-            if (!snapshot.empty) {
-                window.showToast("⚠️ Данный username уже занят!");
+
+            // Проверка уникальности
+            const usersSnapshot = await getDocs(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'users'));
+            let isTaken = false;
+            usersSnapshot.forEach(doc => {
+                if (doc.data().username === cleanUser) isTaken = true;
+            });
+
+            if (isTaken) {
+                window.showToast("⚠️ Юзернейм уже занят!");
                 return;
             }
 
             currentUser.username = cleanUser;
             currentUser.usernameChangedAt = now;
-            const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid);
-            await updateDoc(userDocRef, {
+            await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid), {
                 username: cleanUser,
                 usernameChangedAt: now
             });
             updateProfileUI();
-            window.showToast("✅ Username успешно изменен!");
+            window.showToast("✅ Юзернейм успешно изменен!");
         };
 
-        // Смена аватарки (отправка на модерацию)
         window.triggerAvatarUpload = function() {
+            if (currentUser.subscriptionPlan === 'Free' && currentUser.email !== 'sobakastalina123@gmail.com') {
+                window.showToast("⚠️ Смена аватарки заблокирована на тарифе FREE!");
+                return;
+            }
             document.getElementById('avatar-file-input').click();
         };
 
@@ -1171,15 +1247,13 @@
 
             const reader = new FileReader();
             reader.onloadend = async () => {
-                const base64Avatar = reader.result;
+                const base64 = reader.result;
                 currentUser.avatarStatus = "pending";
-                currentUser.pendingAvatar = base64Avatar;
+                currentUser.pendingAvatar = base64;
 
-                // Сохраняем стейт модерации в Firestore
-                const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid);
-                await updateDoc(userDocRef, {
+                await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid), {
                     avatarStatus: "pending",
-                    pendingAvatar: base64Avatar
+                    pendingAvatar: base64
                 });
 
                 updateProfileUI();
@@ -1188,56 +1262,55 @@
             reader.readAsDataURL(file);
         };
 
-        // Настройка Realtime слушателей
         function listenToDatabaseUpdates() {
             if (!db) return;
 
-            // 1. Слушатель треков
             onSnapshot(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks'), (snapshot) => {
-                const loadedTracks = [];
-                snapshot.forEach(doc => loadedTracks.push(doc.data()));
-                
-                // Объединяем статические треки с треками из БД
-                const dbTracks = loadedTracks.filter(t => t.coverStatus === 'approved' || currentUser.email === 'sobakastalina123@gmail.com' || t.uploadedBy === currentUser.uid);
+                const loaded = [];
+                snapshot.forEach(doc => loaded.push(doc.data()));
+                const dbTracks = loaded.filter(t => t.coverStatus === 'approved' || currentUser.email === 'sobakastalina123@gmail.com' || t.uploadedBy === currentUser.uid);
                 tracks = [...staticTracks, ...dbTracks];
                 renderAllTracks();
                 renderFavoritesList();
                 updateAdminModerationQueue();
                 updateLyricsTrackSelector();
-            }, (error) => console.error("Tracks listener error:", error));
+            });
 
-            // 2. Слушатель плейлистов
             onSnapshot(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists'), (snapshot) => {
                 playlists = [];
                 snapshot.forEach(doc => playlists.push(doc.data()));
                 renderPlaylists();
                 renderProfilePlaylists();
-            }, (error) => console.error("Playlists listener error:", error));
+            });
 
-            // 3. Слушатель пользователей (для админ-панели модерации)
             if (currentUser.email === 'sobakastalina123@gmail.com') {
-                onSnapshot(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'users'), (snapshot) => {
+                onSnapshot(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'users'), () => {
                     updateAdminModerationQueue();
+                });
+                onSnapshot(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'complaints'), (snapshot) => {
+                    const loaded = [];
+                    snapshot.forEach(doc => loaded.push(doc.data()));
+                    renderAdminComplaints(loaded);
                 });
             }
 
-            // 4. Чат поддержки (Слушатель сообщений)
             onSnapshot(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'chat'), (snapshot) => {
                 messages = [];
                 snapshot.forEach(doc => messages.push(doc.data()));
-                // Сортировка по времени
                 messages.sort((a,b) => a.timestamp - b.timestamp);
                 renderSupportMessages();
                 renderAdminSupportMessages();
-            }, (error) => console.error("Chat listener error:", error));
+            });
         }
 
-        // Выкладывание треков
         window.openUploadTrackModal = function() {
-            const limitMax = currentUser.subscriptionPlan === 'Free' ? 2 : (currentUser.subscriptionPlan === 'ISP+' ? 10 : 30);
-            if (currentUser.tracksUploadedCount >= limitMax && currentUser.email !== 'sobakastalina123@gmail.com') {
-                openSubscriptionLimitModal();
-                return;
+            if (currentUser.email !== 'sobakastalina123@gmail.com') {
+                const limitMax = currentUser.subscriptionPlan === 'Free' ? 2 : (currentUser.subscriptionPlan === 'ISP+' ? 7 : Infinity);
+                if (currentUser.tracksUploadedCount >= limitMax) {
+                    document.getElementById('subscription-limit-alert').classList.remove('hidden');
+                    openSubscriptionModal();
+                    return;
+                }
             }
             document.getElementById('upload-track-modal').classList.remove('hidden');
         };
@@ -1246,11 +1319,6 @@
             document.getElementById('upload-track-modal').classList.add('hidden');
         };
 
-        function openSubscriptionLimitModal() {
-            window.showToast("⛔ Лимит бесплатных загрузок исчерпан!");
-            openSubscriptionModal();
-        }
-
         window.submitNewTrack = async function() {
             const title = document.getElementById('track-upload-title').value.trim();
             const artistInput = document.getElementById('track-upload-artist').value.trim();
@@ -1258,14 +1326,13 @@
             const audioFile = document.getElementById('track-upload-audio').files[0];
 
             if (!title || !audioFile) {
-                window.showToast("⚠️ Название и файл обязательны!");
+                window.showToast("⚠️ Название и файл трека обязательны!");
                 return;
             }
 
             const trackId = "track_" + Date.now();
             const artist = artistInput || currentUser.name;
 
-            // Демонстрационный URL для аудио-потока (в песочнице)
             const newTrack = {
                 id: trackId,
                 title: title,
@@ -1278,232 +1345,31 @@
                 lyrics: []
             };
 
-            if (db) {
-                // Добавление в бд
-                await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks', trackId), newTrack);
-                
-                // Увеличение счетчика
-                currentUser.tracksUploadedCount++;
-                const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid);
-                await updateDoc(userDocRef, { tracksUploadedCount: currentUser.tracksUploadedCount });
-                updateProfileUI();
-            }
+            await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks', trackId), newTrack);
+            
+            currentUser.tracksUploadedCount++;
+            await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid), {
+                tracksUploadedCount: currentUser.tracksUploadedCount
+            });
+            updateProfileUI();
 
             closeUploadTrackModal();
             window.showToast("🚀 Трек отправлен на модерацию!");
         };
 
-        // Отправка сообщений в техподдержку
-        let currentSupportImageBase64 = null;
-        window.handleSupportImage = function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                currentSupportImageBase64 = reader.result;
-                window.showToast("📸 Фотография прикреплена!");
-            };
-            reader.readAsDataURL(file);
-        };
-
-        window.sendSupportMessage = async function() {
-            const text = document.getElementById('support-msg-input').value.trim();
-            if (!text && !currentSupportImageBase64) return;
-
-            const msgId = "msg_" + Date.now();
-            const newMsg = {
-                id: msgId,
-                userId: currentUser.uid,
-                userName: currentUser.name,
-                userUsername: currentUser.username,
-                text: text,
-                image: currentSupportImageBase64 || null,
-                timestamp: Date.now(),
-                timeString: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}),
-                dateString: new Date().toLocaleDateString('ru-RU')
-            };
-
-            if (db) {
-                await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'chat', msgId), newMsg);
-            }
-            document.getElementById('support-msg-input').value = '';
-            currentSupportImageBase64 = null;
-            window.showToast("📨 Сообщение отправлено!");
-        };
-
-        // Рендер сообщений для обычного пользователя (только свои и ответы админа)
-        function renderSupportMessages() {
-            const container = document.getElementById('support-messages-container');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const relevantMessages = messages.filter(m => {
-                // Свои сообщения
-                if (m.userId === currentUser.uid) return true;
-                // Ответы админа адресованные лично этому пользователю
-                if (m.text && m.text.includes(`@${currentUser.uid}`)) return true;
-                return false;
-            });
-
-            if (relevantMessages.length === 0) {
-                container.innerHTML = `<div class="text-neutral-500 italic text-center text-sm my-auto">Здесь пусто. Напишите первый вопрос поддержке!</div>`;
-                return;
-            }
-
-            relevantMessages.forEach(m => {
-                const isMyMessage = m.userId === currentUser.uid;
-                const bubble = document.createElement('div');
-                bubble.className = `flex flex-col max-w-[75%] p-3 rounded-2xl space-y-1 ${isMyMessage ? 'bg-violet-600 self-end text-white' : 'bg-neutral-800 self-start text-neutral-200'}`;
-                
-                let imageHtml = '';
-                if (m.image) {
-                    imageHtml = `<img src="${m.image}" class="rounded-xl max-w-full max-h-48 object-cover mb-2">`;
-                }
-
-                bubble.innerHTML = `
-                    ${imageHtml}
-                    <p class="text-sm break-words">${m.text}</p>
-                    <span class="text-[9px] text-neutral-300 self-end">${m.timeString}</span>
-                `;
-                container.appendChild(bubble);
-            });
-            container.scrollTop = container.scrollHeight;
-        }
-
-        // Рендер тикетов для админа
-        function renderAdminSupportMessages() {
-            const container = document.getElementById('admin-support-chat-container');
-            if (!container) return;
-            container.innerHTML = '';
-
-            messages.forEach(m => {
-                const el = document.createElement('div');
-                el.className = "p-3 bg-neutral-900 border border-neutral-800 rounded-xl space-y-2 text-xs";
-                
-                let imageHtml = '';
-                if (m.image) {
-                    imageHtml = `<img src="${m.image}" class="rounded-lg max-h-24 object-cover">`;
-                }
-
-                el.innerHTML = `
-                    <div class="flex justify-between items-center text-neutral-400">
-                        <span class="font-bold text-amber-400">${m.userName} (@${m.userUsername})</span>
-                        <span>${m.dateString} ${m.timeString}</span>
-                    </div>
-                    <p class="text-neutral-200">${m.text}</p>
-                    ${imageHtml}
-                    <div class="flex justify-between items-center pt-1">
-                        <span class="text-[9px] text-neutral-500 font-mono">UID: ${m.userId}</span>
-                        <button onclick="insertAdminReplyTarget('${m.userId}')" class="text-amber-400 hover:underline">Ответить</button>
-                    </div>
-                `;
-                container.appendChild(el);
-            });
-        }
-
-        window.insertAdminReplyTarget = function(uid) {
-            document.getElementById('admin-reply-input').value = `@${uid} `;
-            document.getElementById('admin-reply-input').focus();
-        };
-
-        window.sendAdminReply = async function() {
-            const text = document.getElementById('admin-reply-input').value.trim();
-            if (!text) return;
-
-            const msgId = "msg_" + Date.now();
-            const newMsg = {
-                id: msgId,
-                userId: currentUser.uid,
-                userName: "Служба поддержки",
-                userUsername: "support",
-                text: text,
-                image: null,
-                timestamp: Date.now(),
-                timeString: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}),
-                dateString: new Date().toLocaleDateString('ru-RU')
-            };
-
-            if (db) {
-                await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'chat', msgId), newMsg);
-            }
-            document.getElementById('admin-reply-input').value = '';
-            window.showToast("📨 Ответ админа отправлен!");
-        };
-
-        // Генерация промокодов
-        window.generatePromoCode = async function() {
-            const plan = document.getElementById('promo-plan').value;
-            const period = parseInt(document.getElementById('promo-period').value);
-            
-            const randomCode = "SW-" + plan + "-" + period + "M-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-            
-            const promo = {
-                code: randomCode,
-                plan: plan,
-                periodMonths: period,
-                status: "active"
-            };
-
-            if (db) {
-                await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'promoCodes', randomCode), promo);
-            }
-
-            document.getElementById('promo-code-output').innerText = randomCode;
-            document.getElementById('generated-promo-display').classList.remove('hidden');
-            window.showToast("🎫 Промокод успешно сгенерирован!");
-        };
-
-        // Добавление строки в Lyrics
-        let tempLyrics = [];
-        window.addLyricLine = function() {
-            const time = parseInt(document.getElementById('lyrics-timer').value);
-            const text = document.getElementById('lyrics-text').value.trim();
-
-            if (isNaN(time) || !text) return;
-
-            tempLyrics.push({ time, text });
-            tempLyrics.sort((a,b) => a.time - b.time);
-
-            // Обновить превью
-            const preview = document.getElementById('added-lyrics-preview');
-            preview.innerHTML = tempLyrics.map(l => `<div>[${l.time}s]: ${l.text}</div>`).join('');
-
-            document.getElementById('lyrics-timer').value = '';
-            document.getElementById('lyrics-text').value = '';
-        };
-
-        // Сохранить Lyrics в Firestore
-        window.saveLyricsForTrack = async function() {
-            const trackId = document.getElementById('lyrics-track-selector').value;
-            if (!trackId || tempLyrics.length === 0) {
-                window.showToast("⚠️ Выберите трек и добавьте хотя бы одну строку!");
-                return;
-            }
-
-            if (db) {
-                const trackDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks', trackId);
-                await updateDoc(trackDocRef, { lyrics: tempLyrics });
-                window.showToast("🎵 Синхронизированные слова сохранены!");
-                tempLyrics = [];
-                document.getElementById('added-lyrics-preview').innerHTML = '';
-            }
-        };
-
-        function updateLyricsTrackSelector() {
-            const selector = document.getElementById('lyrics-track-selector');
-            if (!selector) return;
-            selector.innerHTML = tracks.map(t => `<option value="${t.id}">${t.title} (${t.artist})</option>`).join('');
-        }
-
-        // Создание плейлиста
         window.openCreatePlaylistModal = function() {
+            const myPlaylistsCount = playlists.filter(p => p.createdBy === currentUser.uid).length;
+            const limitMax = currentUser.subscriptionPlan === 'Free' ? 3 : (currentUser.subscriptionPlan === 'ISP+' ? 6 : Infinity);
+            
+            if (myPlaylistsCount >= limitMax && currentUser.email !== 'sobakastalina123@gmail.com') {
+                window.showToast(`⚠️ Лимит плейлистов для тарифа ${currentUser.subscriptionPlan} исчерпан!`);
+                return;
+            }
             document.getElementById('playlist-modal').classList.remove('hidden');
-            setTimeout(() => document.getElementById('playlist-modal').classList.add('opacity-100'), 10);
         };
 
         window.closeCreatePlaylistModal = function() {
-            document.getElementById('playlist-modal').classList.remove('opacity-100');
-            setTimeout(() => document.getElementById('playlist-modal').classList.add('hidden'), 300);
+            document.getElementById('playlist-modal').classList.add('hidden');
         };
 
         window.saveNewPlaylist = async function() {
@@ -1528,9 +1394,7 @@
                 trackIds: []
             };
 
-            if (db) {
-                await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists', plId), newPl);
-            }
+            await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists', plId), newPl);
 
             closeCreatePlaylistModal();
             window.showToast(`🎉 Создан плейлист "${name}"`);
@@ -1538,64 +1402,259 @@
             document.getElementById('playlist-desc-input').value = '';
         };
 
-        // Рендеринг плейлистов в боковом меню
-        function renderPlaylists() {
-            const container = document.getElementById('sidebar-playlists');
+        let currentSupportImageBase64 = null;
+        window.handleSupportImage = function(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                currentSupportImageBase64 = reader.result;
+                window.showToast("📸 Картинка добавлена к тикету!");
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.sendSupportMessage = async function() {
+            const text = document.getElementById('support-msg-input').value.trim();
+            if (!text && !currentSupportImageBase64) return;
+
+            const msgId = "msg_" + Date.now();
+            const newMsg = {
+                id: msgId,
+                userId: currentUser.uid,
+                userName: currentUser.name,
+                userUsername: currentUser.username,
+                text: text,
+                image: currentSupportImageBase64 || null,
+                timestamp: Date.now(),
+                timeString: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}),
+                dateString: new Date().toLocaleDateString('ru-RU')
+            };
+
+            await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'chat', msgId), newMsg);
+            document.getElementById('support-msg-input').value = '';
+            currentSupportImageBase64 = null;
+            window.showToast("📨 Отправлено в поддержку!");
+        };
+
+        function renderSupportMessages() {
+            const container = document.getElementById('support-messages-container');
             if (!container) return;
             container.innerHTML = '';
 
-            const myPlaylists = playlists.filter(p => p.createdBy === currentUser.uid);
+            const relevantMessages = messages.filter(m => {
+                if (m.userId === currentUser.uid) return true;
+                if (m.text && m.text.includes(`@${currentUser.uid}`)) return true;
+                return false;
+            });
 
-            if (myPlaylists.length === 0) {
-                container.innerHTML = `<div class="text-xs text-neutral-600 px-4 py-2 italic">Создайте свой первый плейлист</div>`;
+            if (relevantMessages.length === 0) {
+                container.innerHTML = `<div class="text-neutral-500 italic text-center text-sm my-auto">Здесь пусто. Задайте вопрос администрации!</div>`;
                 return;
             }
 
-            myPlaylists.forEach(pl => {
-                const btn = document.createElement('button');
-                btn.onclick = () => openPlaylistView(pl.id);
-                btn.className = "w-full text-left px-4 py-2 rounded-xl text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/30 truncate transition-all flex items-center space-x-2";
-                btn.innerHTML = `
-                    <i class="fa-solid fa-compact-disc text-violet-500"></i>
-                    <span>${pl.name}</span>
+            relevantMessages.forEach(m => {
+                const isMyMessage = m.userId === currentUser.uid;
+                const bubble = document.createElement('div');
+                bubble.className = `flex flex-col max-w-[75%] p-3 rounded-2xl space-y-1 ${isMyMessage ? 'bg-violet-600 self-end text-white' : 'bg-neutral-800 self-start text-neutral-200'}`;
+                
+                let imageHtml = m.image ? `<img src="${m.image}" class="rounded-xl max-w-full max-h-48 object-cover mb-2">` : '';
+
+                bubble.innerHTML = `
+                    ${imageHtml}
+                    <p class="text-sm break-words">${m.text}</p>
+                    <span class="text-[9px] text-neutral-300 self-end">${m.timeString}</span>
                 `;
-                container.appendChild(btn);
+                container.appendChild(bubble);
             });
+            container.scrollTop = container.scrollHeight;
         }
 
-        // Рендеринг публичных плейлистов в профиле
-        function renderProfilePlaylists() {
-            const container = document.getElementById('profile-playlists-grid');
+        function renderAdminSupportMessages() {
+            const container = document.getElementById('admin-support-chat-container');
             if (!container) return;
             container.innerHTML = '';
 
-            const publicPlaylists = playlists.filter(p => p.createdBy === currentUser.uid && p.isPublic);
+            messages.forEach(m => {
+                const el = document.createElement('div');
+                el.className = "p-3 bg-neutral-900 border border-neutral-800 rounded-xl space-y-2 text-xs text-white";
+                let imageHtml = m.image ? `<img src="${m.image}" class="rounded-lg max-h-24 object-cover">` : '';
 
-            if (publicPlaylists.length === 0) {
-                container.innerHTML = `<div class="text-xs text-neutral-500 italic col-span-full">У вас нет публичных плейлистов</div>`;
-                return;
-            }
-
-            publicPlaylists.forEach(pl => {
-                const card = document.createElement('div');
-                card.onclick = () => openPlaylistView(pl.id);
-                card.className = "bg-neutral-900 border border-neutral-800 p-4 rounded-2xl cursor-pointer hover:-translate-y-1 transition-all";
-                card.innerHTML = `
-                    <img src="${pl.cover}" class="w-full aspect-square object-cover rounded-xl mb-3">
-                    <h4 class="font-bold text-sm truncate text-white">${pl.name}</h4>
-                    <span class="text-[10px] text-neutral-400">Публичный</span>
+                el.innerHTML = `
+                    <div class="flex justify-between items-center text-neutral-400">
+                        <span class="font-bold text-amber-400">${m.userName} (@${m.userUsername})</span>
+                        <span>${m.dateString} ${m.timeString}</span>
+                    </div>
+                    <p class="text-neutral-200">${m.text}</p>
+                    ${imageHtml}
+                    <div class="flex justify-between items-center pt-1 border-t border-neutral-800/50 mt-2">
+                        <span class="text-[9px] text-neutral-500 font-mono">ID: ${m.userId}</span>
+                        <button onclick="insertAdminReplyTarget('${m.userId}')" class="text-amber-400 hover:underline">Ответить</button>
+                    </div>
                 `;
-                container.appendChild(card);
+                container.appendChild(el);
             });
         }
 
-        // Выбор тарифного плана подписки
+        window.insertAdminReplyTarget = function(uid) {
+            document.getElementById('admin-reply-input').value = `@${uid} `;
+            document.getElementById('admin-reply-input').focus();
+        };
+
+        window.sendAdminReply = async function() {
+            const text = document.getElementById('admin-reply-input').value.trim();
+            if (!text) return;
+
+            const msgId = "msg_" + Date.now();
+            const newMsg = {
+                id: msgId,
+                userId: currentUser.uid,
+                userName: "Поддержка SoundWave",
+                userUsername: "support_team",
+                text: text,
+                image: null,
+                timestamp: Date.now(),
+                timeString: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}),
+                dateString: new Date().toLocaleDateString('ru-RU')
+            };
+
+            await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'chat', msgId), newMsg);
+            document.getElementById('admin-reply-input').value = '';
+            window.showToast("📨 Ответ поддержки отправлен!");
+        };
+
+        window.openComplaintModal = function() {
+            document.getElementById('complaint-modal').classList.remove('hidden');
+        };
+
+        window.closeComplaintModal = function() {
+            document.getElementById('complaint-modal').classList.add('hidden');
+        };
+
+        window.submitComplaint = async function() {
+            const desc = document.getElementById('complaint-textarea').value.trim();
+            if (!desc) return;
+
+            const complaintId = "complaint_" + Date.now();
+            const complaint = {
+                id: complaintId,
+                userId: currentUser.uid,
+                userName: currentUser.name,
+                description: desc,
+                timestamp: Date.now(),
+                date: new Date().toLocaleString('ru-RU')
+            };
+
+            await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'complaints', complaintId), complaint);
+            document.getElementById('complaint-textarea').value = '';
+            closeComplaintModal();
+            window.showToast("🚀 Жалоба отправлена администрации!");
+        };
+
+        function renderAdminComplaints(list) {
+            const container = document.getElementById('admin-complaints-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (list.length === 0) {
+                container.innerHTML = `<div class="text-xs text-neutral-500 italic">Жалоб нет. Всё спокойно!</div>`;
+                return;
+            }
+
+            list.forEach(c => {
+                const el = document.createElement('div');
+                el.className = "p-3 bg-neutral-950 border border-neutral-800 rounded-xl space-y-1 text-xs text-white";
+                el.innerHTML = `
+                    <div class="flex justify-between items-center text-neutral-400">
+                        <span class="font-bold text-rose-400">${c.userName}</span>
+                        <span>${c.date}</span>
+                    </div>
+                    <p class="text-neutral-200 mt-1">${c.description}</p>
+                    <div class="flex justify-between items-center pt-2">
+                        <span class="text-[9px] text-neutral-500 font-mono">UID: ${c.userId}</span>
+                        <button onclick="resolveComplaint('${c.id}')" class="text-green-400 hover:underline">Закрыть жалобу</button>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        window.resolveComplaint = async function(id) {
+            await deleteDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'complaints', id));
+            window.showToast("✅ Жалоба решена!");
+        };
+
+        window.generatePromoCode = async function() {
+            const plan = document.getElementById('promo-plan').value;
+            const period = parseInt(document.getElementById('promo-period').value);
+            const code = "SW-" + plan + "-" + period + "M-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+            
+            const promo = {
+                code: code,
+                plan: plan,
+                periodMonths: period,
+                status: "active"
+            };
+
+            await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'promoCodes', code), promo);
+
+            document.getElementById('promo-code-output').innerText = code;
+            document.getElementById('generated-promo-display').classList.remove('hidden');
+            window.showToast("🎫 Одноразовый промокод готов!");
+        };
+
+        let tempLyrics = [];
+        window.addLyricLine = function() {
+            const time = parseInt(document.getElementById('lyrics-timer').value);
+            const text = document.getElementById('lyrics-text').value.trim();
+
+            if (isNaN(time) || !text) return;
+            tempLyrics.push({ time, text });
+            tempLyrics.sort((a,b) => a.time - b.time);
+
+            const preview = document.getElementById('added-lyrics-preview');
+            preview.innerHTML = tempLyrics.map(l => `<div>[${l.time}s]: ${l.text}</div>`).join('');
+
+            document.getElementById('lyrics-timer').value = '';
+            document.getElementById('lyrics-text').value = '';
+        };
+
+        window.saveLyricsForTrack = async function() {
+            const trackId = document.getElementById('lyrics-track-selector').value;
+            if (!trackId || tempLyrics.length === 0) {
+                window.showToast("⚠️ Выберите трек и впишите строки!");
+                return;
+            }
+
+            await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks', trackId), {
+                lyrics: tempLyrics
+            });
+            window.showToast("🎵 Текст синхронизирован с треком!");
+            tempLyrics = [];
+            document.getElementById('added-lyrics-preview').innerHTML = '';
+        };
+
+        function updateLyricsTrackSelector() {
+            const selector = document.getElementById('lyrics-track-selector');
+            if (!selector) return;
+            selector.innerHTML = tracks.map(t => `<option value="${t.id}">${t.title} (${t.artist})</option>`).join('');
+        }
+
+        window.openInfoModal = function() {
+            document.getElementById('info-modal').classList.remove('hidden');
+        };
+
+        window.closeInfoModal = function() {
+            document.getElementById('info-modal').classList.add('hidden');
+        };
+
         window.openSubscriptionModal = function() {
             document.getElementById('subscription-modal').classList.remove('hidden');
         };
 
         window.closeSubscriptionModal = function() {
             document.getElementById('subscription-modal').classList.add('hidden');
+            document.getElementById('subscription-limit-alert').classList.add('hidden');
         };
 
         window.selectSubscriptionPlan = function(plan) {
@@ -1608,21 +1667,17 @@
         window.selectPeriod = function(months) {
             currentUploadPeriod = months;
             const rates = currentUploadPlan === "ISP+" ? {1: 250, 3: 450, 6: 800} : {1: 500, 3: 980, 6: 1500};
-            const price = rates[months];
+            document.getElementById('payment-total-price').innerText = `${rates[months]} руб.`;
 
-            document.getElementById('payment-total-price').innerText = `${price} рублей`;
-
-            // Активные стили
-            document.getElementById('period-1m-btn').className = months === 1 ? "p-3 bg-violet-600 border border-violet-500 rounded-xl text-xs font-bold text-center text-white" : "p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-bold text-center";
-            document.getElementById('period-3m-btn').className = months === 3 ? "p-3 bg-violet-600 border border-violet-500 rounded-xl text-xs font-bold text-center text-white" : "p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-bold text-center";
-            document.getElementById('period-6m-btn').className = months === 6 ? "p-3 bg-violet-600 border border-violet-500 rounded-xl text-xs font-bold text-center text-white" : "p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-bold text-center";
+            document.getElementById('period-1m-btn').className = months === 1 ? "p-3 bg-violet-600 rounded-xl text-xs font-bold text-center text-white" : "p-3 bg-neutral-900 rounded-xl text-xs font-bold text-center";
+            document.getElementById('period-3m-btn').className = months === 3 ? "p-3 bg-violet-600 rounded-xl text-xs font-bold text-center text-white" : "p-3 bg-neutral-900 rounded-xl text-xs font-bold text-center";
+            document.getElementById('period-6m-btn').className = months === 6 ? "p-3 bg-violet-600 rounded-xl text-xs font-bold text-center text-white" : "p-3 bg-neutral-900 rounded-xl text-xs font-bold text-center";
         };
 
         window.payWithCard = function() {
             window.showToast("❌ Данный метод оплаты временно недоступен");
         };
 
-        // Промокоды активация
         window.triggerPromoCode = function() {
             document.getElementById('promo-modal').classList.remove('hidden');
         };
@@ -1633,138 +1688,36 @@
 
         window.submitPromoCode = async function() {
             const code = document.getElementById('promo-input-code').value.trim();
-            if (!code || !db) return;
+            if (!code) return;
 
             const promoDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'promoCodes', code);
             const promoDoc = await getDoc(promoDocRef);
 
             if (!promoDoc.exists() || promoDoc.data().status !== 'active') {
-                window.showToast("⚠️ Промокод недействителен или уже активирован!");
+                window.showToast("⚠️ Промокод недействителен или использован!");
                 return;
             }
 
             const promoData = promoDoc.data();
-
-            // Активируем подписку пользователю
-            const expirationDate = new Date();
-            expirationDate.setMonth(expirationDate.getMonth() + promoData.periodMonths);
+            const expiration = new Date();
+            expiration.setMonth(expiration.getMonth() + promoData.periodMonths);
 
             currentUser.subscriptionPlan = promoData.plan;
-            currentUser.subscriptionExpiresAt = expirationDate.toLocaleDateString('ru-RU');
+            currentUser.subscriptionExpiresAt = expiration.toLocaleDateString('ru-RU');
 
-            const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid);
-            await updateDoc(userDocRef, {
+            await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid), {
                 subscriptionPlan: promoData.plan,
-                subscriptionExpiresAt: expirationDate.toLocaleDateString('ru-RU')
+                subscriptionExpiresAt: expiration.toLocaleDateString('ru-RU')
             });
 
-            // Помечаем промокод использованным
             await updateDoc(promoDocRef, { status: "used" });
 
             updateProfileUI();
             closePromoModal();
             closeSubscriptionModal();
-            window.showToast(`🎉 Вам выдана подписка ${promoData.plan} до ${currentUser.subscriptionExpiresAt}!`);
+            window.showToast(`🎉 Подписка ${promoData.plan} активирована до ${currentUser.subscriptionExpiresAt}!`);
         };
 
-        // Модерация для админа
-        async function updateAdminModerationQueue() {
-            const container = document.getElementById('admin-moderation-list');
-            if (!container || !db) return;
-            container.innerHTML = '';
-
-            // Читаем все элементы, требующие модерации
-            // 1. Аватары пользователей
-            const userSnapshot = await getDocs(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'users'));
-            userSnapshot.forEach(uDoc => {
-                const u = uDoc.data();
-                if (u.avatarStatus === 'pending') {
-                    const el = document.createElement('div');
-                    el.className = "p-3 bg-neutral-950 border border-neutral-800 rounded-xl flex items-center justify-between text-xs";
-                    el.innerHTML = `
-                        <div class="flex items-center gap-2">
-                            <img src="${u.pendingAvatar}" class="w-10 h-10 rounded-full object-cover">
-                            <div>
-                                <span class="font-bold text-white block">${u.name}</span>
-                                <span class="text-neutral-500">Запрос на смену аватара</span>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="approveAvatar('${u.uid}')" class="px-3 py-1 bg-green-600 hover:bg-green-500 font-bold rounded-lg text-white">Одобрить</button>
-                            <button onclick="rejectAvatar('${u.uid}')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 font-bold rounded-lg text-white">Отклонить</button>
-                        </div>
-                    `;
-                    container.appendChild(el);
-                }
-            });
-
-            // 2. Обложки треков
-            tracks.forEach(track => {
-                if (track.coverStatus === 'pending') {
-                    const el = document.createElement('div');
-                    el.className = "p-3 bg-neutral-950 border border-neutral-800 rounded-xl flex items-center justify-between text-xs";
-                    el.innerHTML = `
-                        <div class="flex items-center gap-2">
-                            <img src="${track.cover}" class="w-10 h-10 rounded-xl object-cover">
-                            <div>
-                                <span class="font-bold text-white block">${track.title}</span>
-                                <span class="text-neutral-500">Запрос на обложку трека</span>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="approveTrackCover('${track.id}')" class="px-3 py-1 bg-green-600 hover:bg-green-500 font-bold rounded-lg text-white">Одобрить</button>
-                            <button onclick="rejectTrackCover('${track.id}')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 font-bold rounded-lg text-white">Отклонить</button>
-                        </div>
-                    `;
-                    container.appendChild(el);
-                }
-            });
-        }
-
-        // Админ экшены
-        window.approveAvatar = async function(uid) {
-            const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', uid);
-            const userSnap = await getDoc(userDocRef);
-            if (userSnap.exists()) {
-                const u = userSnap.data();
-                await updateDoc(userDocRef, {
-                    avatar: u.pendingAvatar,
-                    avatarStatus: "approved",
-                    pendingAvatar: null
-                });
-                window.showToast("✅ Аватар подтвержден!");
-                updateAdminModerationQueue();
-            }
-        };
-
-        window.rejectAvatar = async function(uid) {
-            const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', uid);
-            await updateDoc(userDocRef, {
-                avatarStatus: "approved", 
-                pendingAvatar: null
-            });
-            window.showToast("❌ Аватар отклонен!");
-            updateAdminModerationQueue();
-        };
-
-        window.approveTrackCover = async function(trackId) {
-            const trackDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks', trackId);
-            await updateDoc(trackDocRef, { coverStatus: "approved" });
-            window.showToast("✅ Обложка трека подтверждена!");
-            updateAdminModerationQueue();
-        };
-
-        window.rejectTrackCover = async function(trackId) {
-            const trackDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks', trackId);
-            await updateDoc(trackDocRef, {
-                coverStatus: "rejected",
-                cover: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop" 
-            });
-            window.showToast("❌ Обложка отклонена!");
-            updateAdminModerationQueue();
-        };
-
-        // Открытие плейлиста
         let activePlaylistViewId = null;
         window.openPlaylistView = function(playlistId) {
             activePlaylistViewId = playlistId;
@@ -1783,11 +1736,11 @@
             const plTracks = tracks.filter(t => pl.trackIds.includes(t.id));
 
             if (plTracks.length === 0) {
-                listContainer.innerHTML = `<div class="text-neutral-500 text-sm py-12 text-center bg-neutral-900/10 rounded-2xl border border-dashed border-neutral-800">В этом плейлисте ещё нет треков. Добавьте из плеера или контекстного меню!</div>`;
+                listContainer.innerHTML = `<div class="text-neutral-500 text-sm py-12 text-center bg-neutral-900/10 rounded-2xl border border-dashed border-neutral-800">В этом плейлисте ещё нет треков.</div>`;
             } else {
                 plTracks.forEach((track, i) => {
                     const el = document.createElement('div');
-                    el.className = "flex items-center justify-between p-3 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer";
+                    el.className = "flex items-center justify-between p-3 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer text-white";
                     el.onclick = () => {
                         activePlaylist = plTracks;
                         selectTrack(i, true);
@@ -1797,11 +1750,11 @@
                             <span class="text-xs text-neutral-500 font-bold w-4">${i+1}</span>
                             <img src="${track.cover}" class="w-10 h-10 rounded-lg object-cover">
                             <div class="min-w-0">
-                                <h4 class="font-semibold text-sm truncate text-white">${track.title}</h4>
+                                <h4 class="font-semibold text-sm truncate">${track.title}</h4>
                                 <p class="text-xs text-neutral-400 truncate">${track.artist}</p>
                             </div>
                         </div>
-                        <button onclick="removeTrackFromPlaylist('${pl.id}', '${track.id}'); event.stopPropagation();" class="text-neutral-500 hover:text-rose-500 transition-colors">
+                        <button onclick="removeTrackFromPlaylist('${pl.id}', '${track.id}'); event.stopPropagation();" class="text-neutral-500 hover:text-rose-500">
                             <i class="fa-solid fa-trash"></i>
                         </button>
                     `;
@@ -1809,7 +1762,7 @@
                 });
             }
 
-            // Shuffle в плейлисте
+            // Случайный разброс треков в плейлисте (Shuffle)
             document.getElementById('playlist-shuffle-btn').onclick = () => {
                 if (plTracks.length > 0) {
                     const shuffled = [...plTracks].sort(() => Math.random() - 0.5);
@@ -1819,7 +1772,6 @@
                 }
             };
 
-            // Play в плейлисте
             document.getElementById('playlist-play-btn').onclick = () => {
                 if (plTracks.length > 0) {
                     activePlaylist = plTracks;
@@ -1827,13 +1779,10 @@
                 }
             };
 
-            // Delete плейлист
             document.getElementById('playlist-delete-btn').onclick = async () => {
-                if (db) {
-                    await deleteDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists', playlistId));
-                    window.showToast("🗑️ Плейлист успешно удален");
-                    window.switchTab('home');
-                }
+                await deleteDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists', playlistId));
+                window.showToast("🗑️ Плейлист удален");
+                window.switchTab('home');
             };
         };
 
@@ -1841,7 +1790,7 @@
             const track = tracks[currentTrackIndex];
             const myPlaylists = playlists.filter(p => p.createdBy === currentUser.uid);
             if (myPlaylists.length === 0) {
-                window.showToast("⚠️ Создайте плейлист в меню!");
+                window.showToast("⚠️ Сначала создайте плейлист!");
                 return;
             }
 
@@ -1855,14 +1804,12 @@
                     return;
                 }
                 target.trackIds.push(track.id);
-                if (db) {
-                    await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists', target.id), {
-                        trackIds: target.trackIds
-                    });
-                }
+                await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists', target.id), {
+                    trackIds: target.trackIds
+                });
                 window.showToast(`✨ Добавлено в ${target.name}!`);
             } else {
-                window.showToast("⚠️ Плейлист не найден");
+                window.showToast("⚠️ Плейлист не найден!");
             }
         };
 
@@ -1874,17 +1821,15 @@
                 return;
             }
 
-            const selection = prompt("Удалить из какого плейлиста? Напишите имя:\n" + myPlaylists.map(p => p.name).join('\n'));
+            const selection = prompt("Удалить из какого плейлиста? Напишите название:\n" + myPlaylists.map(p => p.name).join('\n'));
             if (!selection) return;
 
             const target = myPlaylists.find(p => p.name.toLowerCase() === selection.toLowerCase().trim());
             if (target) {
                 target.trackIds = target.trackIds.filter(id => id !== track.id);
-                if (db) {
-                    await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists', target.id), {
-                        trackIds: target.trackIds
-                    });
-                }
+                await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists', target.id), {
+                    trackIds: target.trackIds
+                });
                 window.showToast(`🗑️ Удалено из ${target.name}!`);
             }
         };
@@ -1893,17 +1838,103 @@
             const pl = playlists.find(p => p.id === playlistId);
             if (pl) {
                 pl.trackIds = pl.trackIds.filter(id => id !== trackId);
-                if (db) {
-                    await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists', playlistId), {
-                        trackIds: pl.trackIds
-                    });
-                }
+                await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists', playlistId), {
+                    trackIds: pl.trackIds
+                });
                 openPlaylistView(playlistId);
-                window.showToast("🗑️ Трек удален!");
+                window.showToast("🗑️ Удалено!");
             }
         };
 
-        // Отрисовка всех треков на Главном экране
+        async function updateAdminModerationQueue() {
+            const container = document.getElementById('admin-moderation-list');
+            if (!container || !db) return;
+            container.innerHTML = '';
+
+            const usersSnap = await getDocs(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'users'));
+            usersSnap.forEach(uDoc => {
+                const u = uDoc.data();
+                if (u.avatarStatus === 'pending') {
+                    const el = document.createElement('div');
+                    el.className = "p-3 bg-neutral-950 border border-neutral-800 rounded-xl flex items-center justify-between text-xs text-white";
+                    el.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <img src="${u.pendingAvatar}" class="w-10 h-10 rounded-full object-cover">
+                            <div>
+                                <span class="font-bold block">${u.name}</span>
+                                <span class="text-neutral-500">Запрос аватара</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="approveAvatar('${u.uid}')" class="px-2.5 py-1 bg-green-600 hover:bg-green-500 font-bold rounded-lg text-white">Одобрить</button>
+                            <button onclick="rejectAvatar('${u.uid}')" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 font-bold rounded-lg text-white">Отказ</button>
+                        </div>
+                    `;
+                    container.appendChild(el);
+                }
+            });
+
+            tracks.forEach(t => {
+                if (t.coverStatus === 'pending') {
+                    const el = document.createElement('div');
+                    el.className = "p-3 bg-neutral-950 border border-neutral-800 rounded-xl flex items-center justify-between text-xs text-white";
+                    el.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <img src="${t.cover}" class="w-10 h-10 rounded-xl object-cover">
+                            <div>
+                                <span class="font-bold block">${t.title}</span>
+                                <span class="text-neutral-500">Запрос обложки трека</span>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="approveTrackCover('${t.id}')" class="px-2.5 py-1 bg-green-600 font-bold rounded-lg">Одобрить</button>
+                            <button onclick="rejectTrackCover('${t.id}')" class="px-2.5 py-1 bg-rose-600 font-bold rounded-lg">Отказ</button>
+                        </div>
+                    `;
+                    container.appendChild(el);
+                }
+            });
+        }
+
+        window.approveAvatar = async function(uid) {
+            const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', uid);
+            const userSnap = await getDoc(userDocRef);
+            if (userSnap.exists()) {
+                const u = userSnap.data();
+                await updateDoc(userDocRef, {
+                    avatar: u.pendingAvatar,
+                    avatarStatus: "approved",
+                    pendingAvatar: null
+                });
+                window.showToast("✅ Аватар изменен!");
+                updateAdminModerationQueue();
+            }
+        };
+
+        window.rejectAvatar = async function(uid) {
+            await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', uid), {
+                avatarStatus: "approved", 
+                pendingAvatar: null
+            });
+            window.showToast("❌ Смена аватарки отклонена!");
+            updateAdminModerationQueue();
+        };
+
+        window.approveTrackCover = async function(trackId) {
+            await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks', trackId), { coverStatus: "approved" });
+            window.showToast("✅ Обложка трека одобрена!");
+            updateAdminModerationQueue();
+        };
+
+        window.rejectTrackCover = async function(trackId) {
+            await updateDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks', trackId), {
+                coverStatus: "rejected",
+                cover: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop" 
+            });
+            window.showToast("❌ Обложка отклонена!");
+            updateAdminModerationQueue();
+        };
+
         function renderAllTracks() {
             const grid = document.getElementById('recommended-grid');
             const quickList = document.getElementById('quick-play-list');
@@ -1912,57 +1943,49 @@
             grid.innerHTML = '';
             quickList.innerHTML = '';
 
-            document.getElementById('tracks-count').innerText = tracks.length;
-
             tracks.forEach((track, index) => {
                 const card = document.createElement('div');
-                card.className = "bg-neutral-900/40 hover:bg-neutral-800/60 border border-neutral-800/40 hover:border-violet-500/30 p-4 rounded-2xl cursor-pointer transition-all duration-300 group hover:-translate-y-1 relative";
+                card.className = "custom-card border hover:border-violet-500/50 p-4 rounded-2xl cursor-pointer transition-all duration-300 group hover:-translate-y-1 relative text-white";
                 card.onclick = () => {
                     activePlaylist = tracks;
                     selectTrack(index, true);
                 };
                 card.innerHTML = `
                     <div class="relative rounded-xl overflow-hidden aspect-square mb-4 bg-neutral-950">
-                        <img src="${track.cover}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="${track.title}">
+                        <img src="${track.cover}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105">
                         <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                            <button class="w-12 h-12 bg-violet-600 hover:bg-violet-500 text-white rounded-full flex items-center justify-center shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-                                <i class="fa-solid fa-play"></i>
-                            </button>
+                            <button class="w-12 h-12 bg-violet-600 text-white rounded-full flex items-center justify-center shadow-lg"><i class="fa-solid fa-play"></i></button>
                         </div>
                     </div>
                     <div>
-                        <h3 class="font-bold text-sm truncate text-white">${track.title}</h3>
+                        <h3 class="font-bold text-sm truncate">${track.title}</h3>
                         <p class="text-xs text-neutral-400 truncate mt-1">${track.artist}</p>
                     </div>
                 `;
                 grid.appendChild(card);
 
-                // Быстрый список
-                const isFavorite = favoriteIds.includes(track.id);
+                const isFav = favoriteIds.includes(track.id);
                 const quickRow = document.createElement('div');
-                quickRow.className = "flex items-center justify-between py-3 hover:bg-neutral-800/30 px-3 rounded-xl transition-all group";
+                quickRow.className = "flex items-center justify-between py-3 hover:bg-neutral-800/30 px-3 rounded-xl transition-all group text-white";
                 quickRow.innerHTML = `
                     <div class="flex items-center space-x-4 cursor-pointer min-w-0" onclick="activePlaylist = tracks; selectTrack(${index}, true)">
                         <span class="text-xs text-neutral-500 font-bold w-4">${index + 1}</span>
-                        <div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-950">
-                            <img src="${track.cover}" class="w-full h-full object-cover">
-                        </div>
+                        <img src="${track.cover}" class="w-10 h-10 rounded-lg object-cover">
                         <div class="min-w-0">
-                            <h4 class="font-bold text-sm text-neutral-200 truncate group-hover:text-violet-400 transition-colors">${track.title}</h4>
+                            <h4 class="font-bold text-sm truncate group-hover:text-violet-400 transition-colors">${track.title}</h4>
                             <p class="text-xs text-neutral-400 truncate mt-0.5">${track.artist}</p>
                         </div>
                     </div>
                     <div class="flex items-center space-x-3">
-                        <span class="text-xs text-neutral-500 hidden sm:inline">${track.duration || '03:40'}</span>
-                        <button onclick="toggleFavorite('${track.id}'); event.stopPropagation();" class="text-neutral-500 hover:text-rose-500 transition-colors">
-                            <i class="fa-solid fa-heart ${isFavorite ? 'text-rose-500' : 'text-neutral-500'}"></i>
+                        <span class="text-xs text-neutral-500">${track.duration}</span>
+                        <button onclick="toggleFavorite('${track.id}'); event.stopPropagation();" class="text-neutral-500 hover:text-rose-500">
+                            <i class="fa-solid fa-heart ${isFav ? 'text-rose-500' : 'text-neutral-500'}"></i>
                         </button>
                     </div>
                 `;
                 quickList.appendChild(quickRow);
             });
 
-            // Обновить профильные треки
             renderProfileTracks();
         }
 
@@ -1980,7 +2003,7 @@
 
             myTracks.forEach((track, i) => {
                 const el = document.createElement('div');
-                el.className = "flex items-center justify-between p-3 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer";
+                el.className = "flex items-center justify-between p-3 custom-card border rounded-xl hover:bg-neutral-800/50 cursor-pointer text-white";
                 el.onclick = () => {
                     activePlaylist = myTracks;
                     selectTrack(i, true);
@@ -1989,8 +2012,8 @@
                     <div class="flex items-center space-x-3 min-w-0">
                         <img src="${track.cover}" class="w-10 h-10 rounded-lg object-cover">
                         <div class="min-w-0">
-                            <h4 class="font-semibold text-sm truncate text-white">${track.title}</h4>
-                            <p class="text-xs text-neutral-400 truncate">Статус модерации: <span class="font-bold text-amber-400 text-[10px]">${track.coverStatus}</span></p>
+                            <h4 class="font-semibold text-sm truncate">${track.title}</h4>
+                            <p class="text-xs text-neutral-400">Статус: <span class="font-bold text-amber-500">${track.coverStatus}</span></p>
                         </div>
                     </div>
                     <span class="text-xs text-neutral-500">ID: ${track.id}</span>
@@ -1999,37 +2022,93 @@
             });
         }
 
-        // Рендеринг любимых треков во вкладке Медиатека
+        function renderPlaylists() {
+            const sidebarContainer = document.getElementById('sidebar-playlists');
+            const libraryContainer = document.getElementById('library-playlists-list');
+            
+            if (sidebarContainer) sidebarContainer.innerHTML = '';
+            if (libraryContainer) libraryContainer.innerHTML = '';
+
+            const myPlaylists = playlists.filter(p => p.createdBy === currentUser.uid);
+
+            myPlaylists.forEach(pl => {
+                if (sidebarContainer) {
+                    const btn = document.createElement('button');
+                    btn.onclick = () => openPlaylistView(pl.id);
+                    btn.className = "w-full text-left px-4 py-2 rounded-xl text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/30 truncate flex items-center space-x-2";
+                    btn.innerHTML = `<i class="fa-solid fa-compact-disc text-violet-500"></i><span class="truncate">${pl.name}</span>`;
+                    sidebarContainer.appendChild(btn);
+                }
+                
+                if (libraryContainer) {
+                    const card = document.createElement('div');
+                    card.onclick = () => openPlaylistView(pl.id);
+                    card.className = "custom-card border p-4 rounded-2xl cursor-pointer hover:border-violet-500 transition-all flex items-center space-x-3 text-white";
+                    card.innerHTML = `
+                        <img src="${pl.cover}" class="w-12 h-12 rounded-lg object-cover">
+                        <div class="min-w-0 flex-1">
+                            <h4 class="font-bold text-sm truncate">${pl.name}</h4>
+                            <span class="text-[10px] text-neutral-400">${pl.isPublic ? 'Публичный' : 'Приватный'}</span>
+                        </div>
+                    `;
+                    libraryContainer.appendChild(card);
+                }
+            });
+        }
+
+        function renderProfilePlaylists() {
+            const container = document.getElementById('profile-playlists-grid');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const myPublicPls = playlists.filter(p => p.createdBy === currentUser.uid && p.isPublic);
+
+            if (myPublicPls.length === 0) {
+                container.innerHTML = `<div class="text-xs text-neutral-500 italic col-span-full">У вас нет публичных плейлистов</div>`;
+                return;
+            }
+
+            myPublicPls.forEach(pl => {
+                const card = document.createElement('div');
+                card.onclick = () => openPlaylistView(pl.id);
+                card.className = "custom-card border p-4 rounded-2xl cursor-pointer hover:-translate-y-1 transition-all text-white";
+                card.innerHTML = `
+                    <img src="${pl.cover}" class="w-full aspect-square object-cover rounded-xl mb-3">
+                    <h4 class="font-bold text-sm truncate">${pl.name}</h4>
+                    <span class="text-[10px] text-neutral-400">Публичный</span>
+                `;
+                container.appendChild(card);
+            });
+        }
+
         function renderFavoritesList() {
             const container = document.getElementById('favorites-list');
-            const badge = document.getElementById('favorites-count-badge');
             if (!container) return;
 
-            const favTracks = tracks.filter(t => favoriteIds.includes(t.id));
-            if (badge) badge.innerText = favTracks.length;
+            const favs = tracks.filter(t => favoriteIds.includes(t.id));
 
-            if (favTracks.length === 0) {
-                container.innerHTML = `<div class="text-neutral-500 text-xs py-4 text-center bg-neutral-900/10 rounded-2xl border border-dashed border-neutral-800">У вас пока нет любимых треков.</div>`;
+            if (favs.length === 0) {
+                container.innerHTML = `<div class="text-xs text-neutral-500 italic">Избранных треков пока нет.</div>`;
                 return;
             }
 
             container.innerHTML = '';
-            favTracks.forEach((track, index) => {
+            favs.forEach((t, i) => {
                 const el = document.createElement('div');
-                el.className = "flex items-center justify-between p-2.5 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer mb-2";
+                el.className = "flex items-center justify-between p-2.5 custom-card border rounded-xl hover:bg-neutral-800/50 cursor-pointer text-white";
                 el.onclick = () => {
-                    activePlaylist = favTracks;
-                    selectTrack(index, true);
+                    activePlaylist = favs;
+                    selectTrack(i, true);
                 };
                 el.innerHTML = `
                     <div class="flex items-center space-x-3 min-w-0">
-                        <img src="${track.cover}" class="w-9 h-9 rounded-lg object-cover">
+                        <img src="${t.cover}" class="w-9 h-9 rounded-lg object-cover">
                         <div class="min-w-0">
-                            <h4 class="font-semibold text-sm truncate text-white">${track.title}</h4>
-                            <p class="text-xs text-neutral-400 truncate">${track.artist}</p>
+                            <h4 class="font-semibold text-sm truncate">${t.title}</h4>
+                            <p class="text-xs text-neutral-400 truncate">${t.artist}</p>
                         </div>
                     </div>
-                    <button onclick="toggleFavorite('${track.id}'); event.stopPropagation();" class="text-rose-500 hover:text-rose-400">
+                    <button onclick="toggleFavorite('${t.id}'); event.stopPropagation();" class="text-rose-500">
                         <i class="fa-solid fa-heart"></i>
                     </button>
                 `;
@@ -2037,7 +2116,6 @@
             });
         }
 
-        // Статические демонстрационные треки
         const staticTracks = [
             {
                 id: "static_1",
@@ -2048,11 +2126,9 @@
                 duration: "06:12",
                 coverStatus: "approved",
                 lyrics: [
-                    { time: 0, text: "[Вступление: Звуки неонового города]" },
-                    { time: 10, text: "Дыхание ночных автомагистралей..." },
-                    { time: 20, text: "Свет фонарей скользит по ветровому стеклу." },
-                    { time: 35, text: "Мы мчимся в бесконечность, разрывая тьму." },
-                    { time: 50, text: "[Мощный синтезаторный соло-проигрыш]" }
+                    { time: 0, text: "[Вступление: Неоновый город]" },
+                    { time: 5, text: "Дыхание ночных автомагистралей..." },
+                    { time: 15, text: "Мы мчимся в бесконечность, разрывая тьму." }
                 ]
             },
             {
@@ -2064,9 +2140,8 @@
                 duration: "07:05",
                 coverStatus: "approved",
                 lyrics: [
-                    { time: 0, text: "[Легкий джазовый ритм]" },
-                    { time: 15, text: "Закрой глаза и отпусти этот день..." },
-                    { time: 30, text: "Звезды загораются прямо у нас над головой." }
+                    { time: 0, text: "[Приятный Лоу-Фай мотив]" },
+                    { time: 10, text: "Закрой глаза и отпусти..." }
                 ]
             }
         ];
@@ -2075,14 +2150,11 @@
             tracks = [...staticTracks];
         }
 
-        // Кнопка быстрого запуска Хита недели
         window.playFeaturedSong = function() {
             activePlaylist = tracks;
             selectTrack(0, true);
-            window.showToast("🎵 Воспроизведение хита недели!");
         };
 
-        // Выбор и запуск воспроизведения трека
         function selectTrack(index, startPlaying = true) {
             if (activePlaylist.length === 0) activePlaylist = tracks;
             if (index < 0 || index >= activePlaylist.length) return;
@@ -2102,16 +2174,13 @@
             document.getElementById('lyrics-track-artist').innerText = track.artist;
             document.getElementById('lyrics-track-cover').src = track.cover;
 
-            // Настройка текста
-            const lyricsToggleBtn = document.getElementById('lyrics-btn-toggle');
+            const toggleBtn = document.getElementById('lyrics-btn-toggle');
             if (track.lyrics && track.lyrics.length > 0) {
-                lyricsToggleBtn.classList.remove('text-neutral-500');
-                lyricsToggleBtn.classList.add('text-white');
+                toggleBtn.className = "text-white hover:text-violet-400 transition-colors text-lg";
                 renderLyrics(track.lyrics);
             } else {
-                lyricsToggleBtn.classList.remove('text-white');
-                lyricsToggleBtn.classList.add('text-neutral-500');
-                document.getElementById('lyrics-container').innerHTML = '<p class="text-neutral-500 italic">Слова для этого трека отсутствуют.</p>';
+                toggleBtn.className = "text-neutral-500 text-lg cursor-not-allowed";
+                document.getElementById('lyrics-container').innerHTML = '<p class="text-neutral-500 italic">Слова отсутствуют.</p>';
             }
 
             updateFavoriteUI();
@@ -2151,8 +2220,8 @@
 
         window.nextTrack = function() {
             if (shuffleMode) {
-                let random = Math.floor(Math.random() * activePlaylist.length);
-                selectTrack(random, true);
+                let r = Math.floor(Math.random() * activePlaylist.length);
+                selectTrack(r, true);
             } else {
                 let next = currentTrackIndex + 1;
                 if (next >= activePlaylist.length) next = 0;
@@ -2163,22 +2232,94 @@
         window.toggleShuffle = function() {
             shuffleMode = !shuffleMode;
             document.getElementById('shuffle-btn').classList.toggle('text-violet-400', shuffleMode);
-            window.showToast(shuffleMode ? "🔀 Перемешивание включено" : "➡️ Воспроизведение по порядку");
+            window.showToast(shuffleMode ? "🔀 Режим перемешивания" : "➡️ Воспроизведение по порядку");
         };
 
         window.toggleRepeat = function() {
             repeatMode = !repeatMode;
             document.getElementById('repeat-btn').classList.toggle('text-violet-400', repeatMode);
             document.getElementById('audio-player').loop = repeatMode;
-            window.showToast(repeatMode ? "🔁 Повтор трека включен" : "➡️ Повтор треков отключен");
+            window.showToast(repeatMode ? "🔁 Повтор трека" : "➡️ Повтор выключен");
         };
 
-        // Избранное
+        const audioEl = document.getElementById('audio-player');
+        audioEl.addEventListener('ended', () => {
+            if (repeatMode) {
+                audioEl.currentTime = 0;
+                audioEl.play();
+            } else {
+                // ПРОВЕРКА НЕОБХОДИМОСТИ ЗАПУСКА РЕКЛАМЫ ПОСЛЕ ОКОНЧАНИЯ ТРЕКА
+                triggerAdSystemIfNeeded();
+            }
+        });
+
+        function triggerAdSystemIfNeeded() {
+            const plan = currentUser ? currentUser.subscriptionPlan : 'Free';
+            if (currentUser && currentUser.email === 'sobakastalina123@gmail.com') {
+                window.nextTrack();
+                return;
+            }
+
+            if (plan === 'Free') {
+                // Реклама после КАЖДОГО трека
+                startAdTimer(50);
+            } else if (plan === 'ISP+') {
+                playedTracksSessionCount++;
+                if (playedTracksSessionCount % 4 === 0) {
+                    startAdTimer(30);
+                } else {
+                    window.nextTrack();
+                }
+            } else {
+                // AUT++ без рекламы
+                window.nextTrack();
+            }
+        }
+
+        function startAdTimer(seconds) {
+            isPlaying = false;
+            audioEl.pause();
+            document.getElementById('play-icon-svg').className = "fa-solid fa-play text-lg text-black";
+
+            const expiration = Date.now() + (seconds * 1000);
+            localStorage.setItem('ad_expiration_time', expiration);
+
+            executeAdOverlay(seconds);
+        }
+
+        function checkActiveAdTimer() {
+            const exp = localStorage.getItem('ad_expiration_time');
+            if (exp) {
+                const diff = parseInt(exp) - Date.now();
+                if (diff > 0) {
+                    executeAdOverlay(Math.ceil(diff / 1000));
+                } else {
+                    localStorage.removeItem('ad_expiration_time');
+                }
+            }
+        }
+
+        function executeAdOverlay(secondsLeft) {
+            const overlay = document.getElementById('ad-blocker-overlay');
+            const counter = document.getElementById('ad-timer-countdown');
+            overlay.classList.remove('hidden');
+            counter.innerText = secondsLeft;
+
+            const interval = setInterval(() => {
+                secondsLeft--;
+                counter.innerText = secondsLeft;
+                if (secondsLeft <= 0) {
+                    clearInterval(interval);
+                    overlay.classList.add('hidden');
+                    localStorage.removeItem('ad_expiration_time');
+                    window.nextTrack();
+                }
+            }, 1000);
+        }
+
         window.toggleFavoriteCurrent = function() {
             const track = activePlaylist[currentTrackIndex];
-            if (track) {
-                window.toggleFavorite(track.id);
-            }
+            if (track) window.toggleFavorite(track.id);
         };
 
         window.toggleFavorite = function(trackId) {
@@ -2188,10 +2329,9 @@
                 window.showToast("💖 Добавлено в Избранное");
             } else {
                 favoriteIds.splice(index, 1);
-                window.showToast("💔 Удалено из Избранных");
+                window.showToast("💔 Удалено из Избранного");
             }
             localStorage.setItem('favoriteIds', JSON.stringify(favoriteIds));
-            
             updateFavoriteUI();
             renderAllTracks();
             renderFavoritesList();
@@ -2203,17 +2343,10 @@
             const icon = document.getElementById('favorite-heart-icon');
             if (!track || !btn || !icon) return;
 
-            const isFavorite = favoriteIds.includes(track.id);
-            if (isFavorite) {
-                icon.className = "fa-solid fa-heart text-rose-500";
-                btn.className = "text-rose-500 active:scale-90 transition-all ml-2 flex-shrink-0";
-            } else {
-                icon.className = "fa-solid fa-heart text-neutral-500";
-                btn.className = "text-neutral-500 hover:text-rose-500 active:scale-90 transition-all ml-2 flex-shrink-0";
-            }
+            const isFav = favoriteIds.includes(track.id);
+            icon.className = isFav ? "fa-solid fa-heart text-rose-500" : "fa-solid fa-heart text-neutral-500";
         }
 
-        // Рендеринг синхронного текста песен
         let activeLyricsList = [];
         function renderLyrics(lyrics) {
             const container = document.getElementById('lyrics-container');
@@ -2223,25 +2356,19 @@
             activeLyricsList.forEach((line, index) => {
                 const p = document.createElement('p');
                 p.id = `lyric-line-${index}`;
-                p.className = "text-neutral-400 hover:text-white transition-all text-sm py-1 font-medium cursor-pointer transform scale-95";
+                p.className = "text-neutral-400 hover:text-white transition-all text-sm py-1 font-medium cursor-pointer";
                 p.innerText = line.text;
-                p.onclick = () => {
-                    document.getElementById('audio-player').currentTime = line.time;
-                };
+                p.onclick = () => { audioEl.currentTime = line.time; };
                 container.appendChild(p);
             });
         }
 
         function updateActiveLyrics(currentTime) {
             if (activeLyricsList.length === 0) return;
-            
             let activeIdx = -1;
             for (let i = 0; i < activeLyricsList.length; i++) {
-                if (currentTime >= activeLyricsList[i].time) {
-                    activeIdx = i;
-                } else {
-                    break;
-                }
+                if (currentTime >= activeLyricsList[i].time) activeIdx = i;
+                else break;
             }
 
             if (activeIdx !== -1) {
@@ -2249,49 +2376,30 @@
                     const el = document.getElementById(`lyric-line-${index}`);
                     if (el) {
                         if (index === activeIdx) {
-                            el.className = "text-violet-400 font-extrabold text-base scale-100 py-1 transition-all duration-300";
+                            el.className = "text-violet-400 font-extrabold text-base py-1";
                             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        } else if (index < activeIdx) {
-                            el.className = "text-neutral-600 font-medium text-xs scale-90 py-1 transition-all duration-300";
                         } else {
-                            el.className = "text-neutral-400 font-medium text-sm scale-95 py-1 transition-all duration-300";
+                            el.className = "text-neutral-500 font-medium text-sm py-1";
                         }
                     }
                 });
             }
         }
 
-        window.toggleLyricsWithState = function() {
-            window.toggleLyricsPanel();
-        };
-
-        // События плеера
-        const audio = document.getElementById('audio-player');
-        audio.addEventListener('timeupdate', () => {
-            if (!audio.duration) return;
-            const progress = (audio.currentTime / audio.duration) * 100;
+        audioEl.addEventListener('timeupdate', () => {
+            if (!audioEl.duration) return;
+            const progress = (audioEl.currentTime / audioEl.duration) * 100;
             document.getElementById('timeline-progress').style.width = `${progress}%`;
-            document.getElementById('current-time').innerText = formatTime(audio.currentTime);
-            document.getElementById('total-time').innerText = formatTime(audio.duration);
-            updateActiveLyrics(audio.currentTime);
-        });
-
-        audio.addEventListener('ended', () => {
-            if (repeatMode) {
-                audio.currentTime = 0;
-                audio.play();
-            } else {
-                window.nextTrack();
-            }
+            document.getElementById('current-time').innerText = formatTime(audioEl.currentTime);
+            document.getElementById('total-time').innerText = formatTime(audioEl.duration);
+            updateActiveLyrics(audioEl.currentTime);
         });
 
         window.seekAudio = function(event) {
             const container = document.getElementById('timeline-container');
             const rect = container.getBoundingClientRect();
             const percentage = (event.clientX - rect.left) / rect.width;
-            if (audio.duration) {
-                audio.currentTime = percentage * audio.duration;
-            }
+            if (audioEl.duration) audioEl.currentTime = percentage * audioEl.duration;
         };
 
         window.setVolumeBySlider = function(event) {
@@ -2299,13 +2407,13 @@
             const rect = container.getBoundingClientRect();
             let percentage = (event.clientX - rect.left) / rect.width;
             percentage = Math.max(0, Math.min(1, percentage));
-            audio.volume = percentage;
+            audioEl.volume = percentage;
             document.getElementById('volume-progress').style.width = `${percentage * 100}%`;
         };
 
         window.toggleMute = function() {
             isMuted = !isMuted;
-            audio.muted = isMuted;
+            audioEl.muted = isMuted;
             document.getElementById('volume-icon').className = isMuted ? "fa-solid fa-volume-xmark text-sm" : "fa-solid fa-volume-high text-sm";
         };
 
@@ -2316,57 +2424,78 @@
             return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
         }
 
-        // Расширенный поиск (Поддержка кириллицы/транслита)
         window.handleSearch = function(query) {
             const container = document.getElementById('search-results-list');
             const badge = document.getElementById('search-results-count');
             if (!container) return;
 
             if (!query.trim()) {
-                container.innerHTML = `<div class="text-neutral-500 text-sm py-8 text-center bg-neutral-900/20 rounded-2xl border border-dashed border-neutral-800">Введите запрос для старта поиска...</div>`;
+                container.innerHTML = `<div class="text-neutral-500 text-sm py-8 text-center border border-dashed border-neutral-800 rounded-2xl">Введите поисковый запрос...</div>`;
                 badge.innerText = "0";
                 return;
             }
 
-            const normalizedQuery = transliterate(query.trim().toLowerCase());
-
+            const normal = transliterate(query.trim().toLowerCase());
             const filtered = tracks.filter(t => {
-                const titleTranslit = transliterate(t.title.toLowerCase());
-                const artistTranslit = transliterate(t.artist.toLowerCase());
-                return titleTranslit.includes(normalizedQuery) || artistTranslit.includes(normalizedQuery);
+                const tTitle = transliterate(t.title);
+                const tArtist = transliterate(t.artist);
+                return tTitle.includes(normal) || tArtist.includes(normal);
             });
 
             badge.innerText = filtered.length;
 
             if (filtered.length === 0) {
-                container.innerHTML = `<div class="text-neutral-500 text-sm py-8 text-center bg-neutral-900/20 rounded-2xl border border-dashed border-neutral-800">Ничего не найдено 😭 Нам очень жаль.</div>`;
+                container.innerHTML = `<div class="text-neutral-500 text-sm py-8 text-center border border-dashed border-neutral-800 rounded-2xl">Результаты не найдены 😭</div>`;
             } else {
                 container.innerHTML = '';
-                filtered.forEach((track, i) => {
+                filtered.forEach((t, i) => {
                     const el = document.createElement('div');
-                    el.className = "flex items-center justify-between p-3 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer";
+                    el.className = "flex items-center justify-between p-3 custom-card border rounded-xl hover:bg-neutral-800/50 cursor-pointer text-white";
                     el.onclick = () => {
                         activePlaylist = filtered;
                         selectTrack(i, true);
                     };
                     el.innerHTML = `
                         <div class="flex items-center space-x-3 min-w-0">
-                            <img src="${track.cover}" class="w-10 h-10 rounded-lg object-cover">
+                            <img src="${t.cover}" class="w-10 h-10 rounded-lg object-cover">
                             <div class="min-w-0">
-                                <h4 class="font-semibold text-sm truncate text-white">${track.title}</h4>
-                                <p class="text-xs text-neutral-400 truncate">${track.artist}</p>
+                                <h4 class="font-semibold text-sm truncate">${t.title}</h4>
+                                <p class="text-xs text-neutral-400 truncate">${t.artist}</p>
                             </div>
                         </div>
-                        <span class="text-xs text-neutral-500">${track.duration || "03:40"}</span>
+                        <span class="text-xs text-neutral-500">${t.duration}</span>
                     `;
                     container.appendChild(el);
                 });
             }
         };
 
-        // SPA маршрутизация
+        let isLightTheme = false;
+        window.toggleTheme = function() {
+            isLightTheme = !isLightTheme;
+            const textEl = document.getElementById('theme-btn-text');
+            if (isLightTheme) {
+                document.documentElement.classList.add('light-theme');
+                textEl.innerText = "Темная тема";
+            } else {
+                document.documentElement.classList.remove('light-theme');
+                textEl.innerText = "Светлая тема";
+            }
+            window.showToast("🎨 Тема успешно изменена!");
+        };
+
+        window.closeInfoModal = function() {
+            document.getElementById('info-modal').classList.add('hidden');
+        };
+
         window.switchTab = function(tabName) {
-            const tabs = ['home', 'search', 'library', 'support', 'profile', 'admin', 'playlist-view'];
+            // Защитная проверка для админки
+            if (tabName === 'admin' && currentUser?.email !== 'sobakastalina123@gmail.com') {
+                window.showToast("⛔ У вас нет прав администратора!");
+                tabName = 'home';
+            }
+
+            const tabs = ['home', 'search', 'library', 'support', 'profile', 'settings', 'admin', 'playlist-view'];
             tabs.forEach(t => {
                 const el = document.getElementById(`tab-${t}`);
                 if (el) el.classList.add('hidden');
@@ -2375,8 +2504,7 @@
             const target = document.getElementById(`tab-${tabName}`);
             if (target) target.classList.remove('hidden');
 
-            // Обновить активные стили меню
-            const menuBtns = ['home', 'search', 'library', 'support', 'profile', 'admin'];
+            const menuBtns = ['home', 'search', 'library', 'support', 'profile', 'settings', 'admin'];
             menuBtns.forEach(btn => {
                 const el = document.getElementById(`nav-${btn}`);
                 if (el) {
@@ -2385,7 +2513,13 @@
             });
         };
 
-        // Спектроанализатор Fallback
+        window.handleLogout = async function() {
+            await signOut(auth);
+            currentUser = null;
+            window.location.reload();
+        };
+
+        // Спектроанализатор
         const canvas = document.getElementById('visualizer-canvas');
         const ctx = canvas.getContext('2d');
         let wavePhase = 0;
@@ -2427,10 +2561,7 @@
             `;
             container.appendChild(toast);
 
-            setTimeout(() => {
-                toast.classList.remove('translate-y-4', 'opacity-0');
-            }, 10);
-
+            setTimeout(() => { toast.classList.remove('translate-y-4', 'opacity-0'); }, 10);
             setTimeout(() => {
                 toast.classList.add('translate-y-4', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
