@@ -81,7 +81,7 @@
                         <span>Профиль</span>
                     </button>
 
-                    <!-- Админ-меню кнопка (показывается только sobakastalina123@gmail.com) -->
+                    <!-- Админ-меню кнопка -->
                     <button onclick="switchTab('admin')" id="nav-admin" class="w-full flex items-center space-x-4 px-4 py-3 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-950/20 transition-all duration-200 hidden border border-amber-500/20">
                         <i class="fa-solid fa-shield-halved w-5 text-center"></i>
                         <span>Панель админа</span>
@@ -848,8 +848,7 @@
         };
 
         let firebaseApp, auth, db;
-        // Используем ID вашего проекта по умолчанию для путей коллекций
-        const defaultAppId = typeof __app_id !== 'undefined' ? __app_id : 'jopa-2e821';
+        const defaultAppId = 'jopa-2e821';
         
         try {
             firebaseApp = initializeApp(firebaseConfig);
@@ -857,7 +856,7 @@
             db = getFirestore(firebaseApp);
         } catch (err) {
             console.error("Ошибка при инициализации Firebase:", err);
-            showToast("⚠️ Ошибка подключения к базе данных");
+            window.showToast("⚠️ Ошибка подключения к базе данных");
         }
 
         let currentUser = null;
@@ -869,7 +868,7 @@
         let activePlaylist = [];
         let tracks = [];
         let playlists = [];
-        let favoriteIds = [];
+        let favoriteIds = JSON.parse(localStorage.getItem('favoriteIds') || '[]');
         let messages = [];
         let currentUploadPlan = "ISP+";
         let currentUploadPeriod = 1;
@@ -907,6 +906,7 @@
             initVisualizerFallback();
             await loadStaticTracks();
             renderAllTracks();
+            renderFavoritesList();
         };
 
         // Загрузка профиля пользователя из Firestore
@@ -1002,7 +1002,7 @@
         window.toggleAuthMode = function() {
             isRegisterMode = !isRegisterMode;
             document.getElementById('auth-title').innerText = isRegisterMode ? "Регистрация в SoundWave" : "Вход в SoundWave";
-            document.getElementById('auth-subtitle').innerText = isRegisterMode ? "Создайте аккаунт, чтобы слушать и выкладывать музыку";
+            document.getElementById('auth-subtitle').innerText = isRegisterMode ? "Создайте аккаунт, чтобы слушать и выкладывать музыку" : "Добро пожаловать в мир безграничной музыки";
             document.getElementById('auth-reg-fields').classList.toggle('hidden', !isRegisterMode);
             document.getElementById('auth-repeat-password-field').classList.toggle('hidden', !isRegisterMode);
             document.getElementById('auth-submit-btn').innerText = isRegisterMode ? "Зарегистрироваться" : "Войти в систему";
@@ -1037,7 +1037,7 @@
         window.handleAuthSubmit = async function(event) {
             event.preventDefault();
             if (!auth) {
-                showToast("⚠️ Firebase не инициализирован");
+                window.showToast("⚠️ Firebase не инициализирован");
                 return;
             }
 
@@ -1050,11 +1050,11 @@
                 const passwordRepeat = document.getElementById('auth-password-repeat').value;
 
                 if (!name || !username) {
-                    showToast("⚠️ Пожалуйста, заполните имя и юзернейм");
+                    window.showToast("⚠️ Пожалуйста, заполните имя и юзернейм");
                     return;
                 }
                 if (password !== passwordRepeat) {
-                    showToast("⚠️ Пароли не совпадают!");
+                    window.showToast("⚠️ Пароли не совпадают!");
                     return;
                 }
 
@@ -1083,17 +1083,17 @@
 
                     document.getElementById('auth-modal').classList.add('hidden');
                     document.getElementById('verify-modal').classList.remove('hidden');
-                    showToast("📧 Письмо для подтверждения отправлено!");
+                    window.showToast("📧 Письмо для подтверждения отправлено!");
                 } catch (e) {
-                    showToast("⚠️ Ошибка регистрации: " + e.message);
+                    window.showToast("⚠️ Ошибка регистрации: " + e.message);
                 }
             } else {
                 // Авторизация
                 try {
                     await signInWithEmailAndPassword(auth, email, password);
-                    showToast("🔐 Вход успешно выполнен!");
+                    window.showToast("🔐 Вход успешно выполнен!");
                 } catch (e) {
-                    showToast("⚠️ Неверный логин или пароль");
+                    window.showToast("⚠️ Неверный логин или пароль");
                 }
             }
         };
@@ -1105,9 +1105,9 @@
             if (auth.currentUser.emailVerified || auth.currentUser.email === 'sobakastalina123@gmail.com') {
                 document.getElementById('verify-modal').classList.add('hidden');
                 await loadUserProfile(auth.currentUser);
-                showToast("🎉 Добро пожаловать на SoundWave!");
+                window.showToast("🎉 Добро пожаловать на SoundWave!");
             } else {
-                showToast("⚠️ Почта ещё не подтверждена! Проверьте спам.");
+                window.showToast("⚠️ Почта ещё не подтверждена! Проверьте спам.");
             }
         };
 
@@ -1119,7 +1119,7 @@
                 const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid);
                 await updateDoc(userDocRef, { name: currentUser.name });
                 updateProfileUI();
-                showToast("✅ Никнейм изменен!");
+                window.showToast("✅ Никнейм изменен!");
             }
         };
 
@@ -1130,7 +1130,7 @@
             if (currentUser.usernameChangedAt && (now - currentUser.usernameChangedAt < threeDays)) {
                 const diff = threeDays - (now - currentUser.usernameChangedAt);
                 const hoursLeft = Math.ceil(diff / (1000 * 60 * 60));
-                showToast(`⚠️ Изменение раз в 3 дня. Осталось: ${hoursLeft} ч.`);
+                window.showToast(`⚠️ Изменение раз в 3 дня. Осталось: ${hoursLeft} ч.`);
                 return;
             }
 
@@ -1145,7 +1145,7 @@
             );
             const snapshot = await getDocs(q);
             if (!snapshot.empty) {
-                showToast("⚠️ Данный username уже занят!");
+                window.showToast("⚠️ Данный username уже занят!");
                 return;
             }
 
@@ -1157,7 +1157,7 @@
                 usernameChangedAt: now
             });
             updateProfileUI();
-            showToast("✅ Username успешно изменен!");
+            window.showToast("✅ Username успешно изменен!");
         };
 
         // Смена аватарки (отправка на модерацию)
@@ -1183,7 +1183,7 @@
                 });
 
                 updateProfileUI();
-                showToast("🕒 Аватарка отправлена на модерацию!");
+                window.showToast("🕒 Аватарка отправлена на модерацию!");
             };
             reader.readAsDataURL(file);
         };
@@ -1201,6 +1201,7 @@
                 const dbTracks = loadedTracks.filter(t => t.coverStatus === 'approved' || currentUser.email === 'sobakastalina123@gmail.com' || t.uploadedBy === currentUser.uid);
                 tracks = [...staticTracks, ...dbTracks];
                 renderAllTracks();
+                renderFavoritesList();
                 updateAdminModerationQueue();
                 updateLyricsTrackSelector();
             }, (error) => console.error("Tracks listener error:", error));
@@ -1246,7 +1247,7 @@
         };
 
         function openSubscriptionLimitModal() {
-            showToast("⛔ Лимит бесплатных загрузок исчерпан!");
+            window.showToast("⛔ Лимит бесплатных загрузок исчерпан!");
             openSubscriptionModal();
         }
 
@@ -1257,7 +1258,7 @@
             const audioFile = document.getElementById('track-upload-audio').files[0];
 
             if (!title || !audioFile) {
-                showToast("⚠️ Название и файл обязательны!");
+                window.showToast("⚠️ Название и файл обязательны!");
                 return;
             }
 
@@ -1289,7 +1290,7 @@
             }
 
             closeUploadTrackModal();
-            showToast("🚀 Трек отправлен на модерацию!");
+            window.showToast("🚀 Трек отправлен на модерацию!");
         };
 
         // Отправка сообщений в техподдержку
@@ -1300,7 +1301,7 @@
             const reader = new FileReader();
             reader.onloadend = () => {
                 currentSupportImageBase64 = reader.result;
-                showToast("📸 Фотография прикреплена!");
+                window.showToast("📸 Фотография прикреплена!");
             };
             reader.readAsDataURL(file);
         };
@@ -1327,7 +1328,7 @@
             }
             document.getElementById('support-msg-input').value = '';
             currentSupportImageBase64 = null;
-            showToast("📨 Сообщение отправлено!");
+            window.showToast("📨 Сообщение отправлено!");
         };
 
         // Рендер сообщений для обычного пользователя (только свои и ответы админа)
@@ -1426,7 +1427,7 @@
                 await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'chat', msgId), newMsg);
             }
             document.getElementById('admin-reply-input').value = '';
-            showToast("📨 Ответ админа отправлен!");
+            window.showToast("📨 Ответ админа отправлен!");
         };
 
         // Генерация промокодов
@@ -1449,7 +1450,7 @@
 
             document.getElementById('promo-code-output').innerText = randomCode;
             document.getElementById('generated-promo-display').classList.remove('hidden');
-            showToast("🎫 Промокод успешно сгенерирован!");
+            window.showToast("🎫 Промокод успешно сгенерирован!");
         };
 
         // Добавление строки в Lyrics
@@ -1475,14 +1476,14 @@
         window.saveLyricsForTrack = async function() {
             const trackId = document.getElementById('lyrics-track-selector').value;
             if (!trackId || tempLyrics.length === 0) {
-                showToast("⚠️ Выберите трек и добавьте хотя бы одну строку!");
+                window.showToast("⚠️ Выберите трек и добавьте хотя бы одну строку!");
                 return;
             }
 
             if (db) {
                 const trackDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks', trackId);
                 await updateDoc(trackDocRef, { lyrics: tempLyrics });
-                showToast("🎵 Синхронизированные слова сохранены!");
+                window.showToast("🎵 Синхронизированные слова сохранены!");
                 tempLyrics = [];
                 document.getElementById('added-lyrics-preview').innerHTML = '';
             }
@@ -1512,7 +1513,7 @@
             const privacy = document.getElementById('playlist-privacy').value;
 
             if (!name) {
-                showToast("⚠️ Укажите название плейлиста");
+                window.showToast("⚠️ Укажите название плейлиста");
                 return;
             }
 
@@ -1532,7 +1533,7 @@
             }
 
             closeCreatePlaylistModal();
-            showToast(`🎉 Создан плейлист "${name}"`);
+            window.showToast(`🎉 Создан плейлист "${name}"`);
             document.getElementById('playlist-name-input').value = '';
             document.getElementById('playlist-desc-input').value = '';
         };
@@ -1601,7 +1602,7 @@
             currentUploadPlan = plan;
             document.getElementById('payment-selected-plan').innerText = plan;
             document.getElementById('payment-block').classList.remove('hidden');
-            selectPeriod(1);
+            window.selectPeriod(1);
         };
 
         window.selectPeriod = function(months) {
@@ -1618,7 +1619,7 @@
         };
 
         window.payWithCard = function() {
-            showToast("❌ Данный метод оплаты временно недоступен");
+            window.showToast("❌ Данный метод оплаты временно недоступен");
         };
 
         // Промокоды активация
@@ -1638,7 +1639,7 @@
             const promoDoc = await getDoc(promoDocRef);
 
             if (!promoDoc.exists() || promoDoc.data().status !== 'active') {
-                showToast("⚠️ Промокод недействителен или уже активирован!");
+                window.showToast("⚠️ Промокод недействителен или уже активирован!");
                 return;
             }
 
@@ -1663,7 +1664,7 @@
             updateProfileUI();
             closePromoModal();
             closeSubscriptionModal();
-            showToast(`🎉 Вам выдана подписка ${promoData.plan} до ${currentUser.subscriptionExpiresAt}!`);
+            window.showToast(`🎉 Вам выдана подписка ${promoData.plan} до ${currentUser.subscriptionExpiresAt}!`);
         };
 
         // Модерация для админа
@@ -1731,7 +1732,7 @@
                     avatarStatus: "approved",
                     pendingAvatar: null
                 });
-                showToast("✅ Аватар подтвержден!");
+                window.showToast("✅ Аватар подтвержден!");
                 updateAdminModerationQueue();
             }
         };
@@ -1742,14 +1743,14 @@
                 avatarStatus: "approved", 
                 pendingAvatar: null
             });
-            showToast("❌ Аватар отклонен!");
+            window.showToast("❌ Аватар отклонен!");
             updateAdminModerationQueue();
         };
 
         window.approveTrackCover = async function(trackId) {
             const trackDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks', trackId);
             await updateDoc(trackDocRef, { coverStatus: "approved" });
-            showToast("✅ Обложка трека подтверждена!");
+            window.showToast("✅ Обложка трека подтверждена!");
             updateAdminModerationQueue();
         };
 
@@ -1759,7 +1760,7 @@
                 coverStatus: "rejected",
                 cover: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop" 
             });
-            showToast("❌ Обложка отклонена!");
+            window.showToast("❌ Обложка отклонена!");
             updateAdminModerationQueue();
         };
 
@@ -1770,7 +1771,7 @@
             const pl = playlists.find(p => p.id === playlistId);
             if (!pl) return;
 
-            switchTab('playlist-view');
+            window.switchTab('playlist-view');
             document.getElementById('playlist-view-title').innerText = pl.name;
             document.getElementById('playlist-view-desc').innerText = pl.description;
             document.getElementById('playlist-view-privacy').innerText = pl.isPublic ? "ПУБЛИЧНЫЙ ПЛЕЙЛИСТ" : "ПРИВАТНЫЙ ПЛЕЙЛИСТ";
@@ -1814,7 +1815,7 @@
                     const shuffled = [...plTracks].sort(() => Math.random() - 0.5);
                     activePlaylist = shuffled;
                     selectTrack(0, true);
-                    showToast("🔀 Плейлист перемешан!");
+                    window.showToast("🔀 Плейлист перемешан!");
                 }
             };
 
@@ -1830,8 +1831,8 @@
             document.getElementById('playlist-delete-btn').onclick = async () => {
                 if (db) {
                     await deleteDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists', playlistId));
-                    showToast("🗑️ Плейлист успешно удален");
-                    switchTab('home');
+                    window.showToast("🗑️ Плейлист успешно удален");
+                    window.switchTab('home');
                 }
             };
         };
@@ -1840,7 +1841,7 @@
             const track = tracks[currentTrackIndex];
             const myPlaylists = playlists.filter(p => p.createdBy === currentUser.uid);
             if (myPlaylists.length === 0) {
-                showToast("⚠️ Создайте плейлист в меню!");
+                window.showToast("⚠️ Создайте плейлист в меню!");
                 return;
             }
 
@@ -1850,7 +1851,7 @@
             const target = myPlaylists.find(p => p.name.toLowerCase() === selection.toLowerCase().trim());
             if (target) {
                 if (target.trackIds.includes(track.id)) {
-                    showToast("⚠️ Трек уже добавлен!");
+                    window.showToast("⚠️ Трек уже добавлен!");
                     return;
                 }
                 target.trackIds.push(track.id);
@@ -1859,9 +1860,9 @@
                         trackIds: target.trackIds
                     });
                 }
-                showToast(`✨ Добавлено в ${target.name}!`);
+                window.showToast(`✨ Добавлено в ${target.name}!`);
             } else {
-                showToast("⚠️ Плейлист не найден");
+                window.showToast("⚠️ Плейлист не найден");
             }
         };
 
@@ -1869,7 +1870,7 @@
             const track = tracks[currentTrackIndex];
             const myPlaylists = playlists.filter(p => p.createdBy === currentUser.uid && p.trackIds.includes(track.id));
             if (myPlaylists.length === 0) {
-                showToast("⚠️ Трек отсутствует в ваших плейлистах!");
+                window.showToast("⚠️ Трек отсутствует в ваших плейлистах!");
                 return;
             }
 
@@ -1884,7 +1885,7 @@
                         trackIds: target.trackIds
                     });
                 }
-                showToast(`🗑️ Удалено из ${target.name}!`);
+                window.showToast(`🗑️ Удалено из ${target.name}!`);
             }
         };
 
@@ -1898,7 +1899,7 @@
                     });
                 }
                 openPlaylistView(playlistId);
-                showToast("🗑️ Трек удален!");
+                window.showToast("🗑️ Трек удален!");
             }
         };
 
@@ -1998,6 +1999,44 @@
             });
         }
 
+        // Рендеринг любимых треков во вкладке Медиатека
+        function renderFavoritesList() {
+            const container = document.getElementById('favorites-list');
+            const badge = document.getElementById('favorites-count-badge');
+            if (!container) return;
+
+            const favTracks = tracks.filter(t => favoriteIds.includes(t.id));
+            if (badge) badge.innerText = favTracks.length;
+
+            if (favTracks.length === 0) {
+                container.innerHTML = `<div class="text-neutral-500 text-xs py-4 text-center bg-neutral-900/10 rounded-2xl border border-dashed border-neutral-800">У вас пока нет любимых треков.</div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            favTracks.forEach((track, index) => {
+                const el = document.createElement('div');
+                el.className = "flex items-center justify-between p-2.5 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer mb-2";
+                el.onclick = () => {
+                    activePlaylist = favTracks;
+                    selectTrack(index, true);
+                };
+                el.innerHTML = `
+                    <div class="flex items-center space-x-3 min-w-0">
+                        <img src="${track.cover}" class="w-9 h-9 rounded-lg object-cover">
+                        <div class="min-w-0">
+                            <h4 class="font-semibold text-sm truncate text-white">${track.title}</h4>
+                            <p class="text-xs text-neutral-400 truncate">${track.artist}</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleFavorite('${track.id}'); event.stopPropagation();" class="text-rose-500 hover:text-rose-400">
+                        <i class="fa-solid fa-heart"></i>
+                    </button>
+                `;
+                container.appendChild(el);
+            });
+        }
+
         // Статические демонстрационные треки
         const staticTracks = [
             {
@@ -2036,6 +2075,13 @@
             tracks = [...staticTracks];
         }
 
+        // Кнопка быстрого запуска Хита недели
+        window.playFeaturedSong = function() {
+            activePlaylist = tracks;
+            selectTrack(0, true);
+            window.showToast("🎵 Воспроизведение хита недели!");
+        };
+
         // Выбор и запуск воспроизведения трека
         function selectTrack(index, startPlaying = true) {
             if (activePlaylist.length === 0) activePlaylist = tracks;
@@ -2068,9 +2114,11 @@
                 document.getElementById('lyrics-container').innerHTML = '<p class="text-neutral-500 italic">Слова для этого трека отсутствуют.</p>';
             }
 
+            updateFavoriteUI();
+
             if (startPlaying) {
                 isPlaying = false;
-                togglePlay();
+                window.togglePlay();
             }
         }
 
@@ -2090,7 +2138,7 @@
                     playIcon.className = "fa-solid fa-pause text-lg text-black";
                     cover.classList.add('pulsing-cover');
                 }).catch(() => {
-                    showToast("⚠️ Нажмите кнопку воспроизведения повторно");
+                    window.showToast("⚠️ Нажмите кнопку воспроизведения повторно");
                 });
             }
         };
@@ -2115,15 +2163,55 @@
         window.toggleShuffle = function() {
             shuffleMode = !shuffleMode;
             document.getElementById('shuffle-btn').classList.toggle('text-violet-400', shuffleMode);
-            showToast(shuffleMode ? "🔀 Перемешивание включено" : "➡️ Воспроизведение по порядку");
+            window.showToast(shuffleMode ? "🔀 Перемешивание включено" : "➡️ Воспроизведение по порядку");
         };
 
         window.toggleRepeat = function() {
             repeatMode = !repeatMode;
             document.getElementById('repeat-btn').classList.toggle('text-violet-400', repeatMode);
             document.getElementById('audio-player').loop = repeatMode;
-            showToast(repeatMode ? "🔁 Повтор трека включен" : "➡️ Повтор треков отключен");
+            window.showToast(repeatMode ? "🔁 Повтор трека включен" : "➡️ Повтор треков отключен");
         };
+
+        // Избранное
+        window.toggleFavoriteCurrent = function() {
+            const track = activePlaylist[currentTrackIndex];
+            if (track) {
+                window.toggleFavorite(track.id);
+            }
+        };
+
+        window.toggleFavorite = function(trackId) {
+            const index = favoriteIds.indexOf(trackId);
+            if (index === -1) {
+                favoriteIds.push(trackId);
+                window.showToast("💖 Добавлено в Избранное");
+            } else {
+                favoriteIds.splice(index, 1);
+                window.showToast("💔 Удалено из Избранных");
+            }
+            localStorage.setItem('favoriteIds', JSON.stringify(favoriteIds));
+            
+            updateFavoriteUI();
+            renderAllTracks();
+            renderFavoritesList();
+        };
+
+        function updateFavoriteUI() {
+            const track = activePlaylist[currentTrackIndex];
+            const btn = document.getElementById('player-favorite-btn');
+            const icon = document.getElementById('favorite-heart-icon');
+            if (!track || !btn || !icon) return;
+
+            const isFavorite = favoriteIds.includes(track.id);
+            if (isFavorite) {
+                icon.className = "fa-solid fa-heart text-rose-500";
+                btn.className = "text-rose-500 active:scale-90 transition-all ml-2 flex-shrink-0";
+            } else {
+                icon.className = "fa-solid fa-heart text-neutral-500";
+                btn.className = "text-neutral-500 hover:text-rose-500 active:scale-90 transition-all ml-2 flex-shrink-0";
+            }
+        }
 
         // Рендеринг синхронного текста песен
         let activeLyricsList = [];
@@ -2174,7 +2262,7 @@
         }
 
         window.toggleLyricsWithState = function() {
-            toggleLyricsPanel();
+            window.toggleLyricsPanel();
         };
 
         // События плеера
@@ -2193,7 +2281,7 @@
                 audio.currentTime = 0;
                 audio.play();
             } else {
-                nextTrack();
+                window.nextTrack();
             }
         });
 
@@ -2276,7 +2364,7 @@
             }
         };
 
-        // Мультистраничная SPA маршрутизация
+        // SPA маршрутизация
         window.switchTab = function(tabName) {
             const tabs = ['home', 'search', 'library', 'support', 'profile', 'admin', 'playlist-view'];
             tabs.forEach(t => {
