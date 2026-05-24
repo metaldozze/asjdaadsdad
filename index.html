@@ -53,6 +53,8 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 .cover-modal:not(.hidden) { opacity: 1; pointer-events: auto; }
 .cover-modal-content { transition: transform 0.2s ease, opacity 0.2s ease; }
 .cover-modal.hidden .cover-modal-content { transform: scale(0.95); opacity: 0; }
+.player-collapsed .footer-player { transform: translateY(calc(100% - 60px)); }
+.player-collapsed #player-toggle-btn { transform: rotate(180deg); }
 </style>
 </head>
 <body class="bg-neutral-950 text-neutral-100 h-full flex flex-col overflow-hidden select-none transition-colors duration-300">
@@ -257,6 +259,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <span id="profile-subscription-badge" class="px-3 py-1 bg-neutral-800 text-neutral-400 rounded-full text-xs font-bold border border-neutral-700 uppercase tracking-widest">Бесплатный план</span>
 <button onclick="openSubscriptionModal()" class="px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 rounded-full text-xs font-bold shadow-md transition-all active:scale-95 btn-hover">Улучшить план</button>
 </div>
+<div id="profile-subscription-expiry" class="mt-2 text-xs text-neutral-500"></div>
 </div>
 </div>
 </div>
@@ -395,7 +398,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </div>
 
 <!-- Плеер -->
-<footer class="fixed bottom-0 left-0 right-0 h-24 bg-neutral-900/95 backdrop-blur-md border-t border-neutral-800/80 px-6 py-4 flex items-center justify-between z-40 shadow-2xl transition-colors duration-300">
+<footer id="footer-player" class="footer-player fixed bottom-0 left-0 right-0 h-24 bg-neutral-900/95 backdrop-blur-md border-t border-neutral-800/80 px-6 py-4 flex items-center justify-between z-40 shadow-2xl transition-all duration-300">
 <div class="flex items-center space-x-4 w-1/3 min-w-0">
 <div class="relative w-14 h-14 rounded-xl overflow-hidden shadow-md flex-shrink-0 bg-neutral-950 border border-neutral-800 group cover-zoom cursor-pointer" onclick="showCoverModal(document.getElementById('current-track-cover').src, document.getElementById('current-track-title').innerText, document.getElementById('current-track-artist').innerText)">
 <img id="current-track-cover" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=100&auto=format&fit=crop" alt="Track Cover" class="w-full h-full object-cover">
@@ -448,12 +451,19 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </div>
 </div>
 </div>
+<!-- Кнопка скрытия плеера -->
+<button id="player-toggle-btn" onclick="togglePlayerVisibility()" class="ml-2 text-neutral-400 hover:text-white transition-colors btn-hover" title="Скрыть/Показать плеер">
+<i class="fa-solid fa-chevron-down text-sm"></i>
+</button>
 </div>
 </footer>
 
 <!-- Модальное окно обложки трека -->
 <div id="cover-modal" class="cover-modal fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center hidden">
-<div class="cover-modal-content bg-neutral-900 border border-neutral-800 rounded-3xl p-6 max-w-md w-full mx-4 text-center">
+<div class="cover-modal-content bg-neutral-900 border border-neutral-800 rounded-3xl p-6 max-w-md w-full mx-4 text-center relative">
+<button onclick="hideCoverModal()" class="absolute top-4 right-4 w-8 h-8 bg-neutral-800 hover:bg-neutral-700 rounded-full flex items-center justify-center text-neutral-400 hover:text-white transition-all">
+<i class="fa-solid fa-xmark"></i>
+</button>
 <img id="cover-modal-img" src="" alt="Track Cover" class="w-full aspect-square object-cover rounded-2xl mb-4 shadow-2xl">
 <h3 id="cover-modal-title" class="text-xl font-bold text-white mb-1"></h3>
 <p id="cover-modal-artist" class="text-sm text-neutral-400"></p>
@@ -710,7 +720,8 @@ let favoriteIds = JSON.parse(localStorage.getItem('favoriteIds') || '[]');
 let currentAdCount = 0, sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2);
 let importedTracksMatched = [], importedTracksUnmatched = [];
 let selectedPlan = null, selectedPeriod = null;
-let trackPlayed = false; // Флаг: был ли трек прослушан до конца
+let trackPlayed = false;
+let playerVisible = true;
 
 function transliterate(text) {
   const rus = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя", lat = ["a","b","v","g","d","e","e","zh","z","i","y","k","l","m","n","o","p","r","s","t","u","f","h","ts","ch","sh","shch","","y","","e","yu","ya"];
@@ -733,6 +744,28 @@ function getNextMskReset() {
   const mskTime = new Date(now.getTime() + mskOffset);
   mskTime.setUTCHours(0,0,0,0);
   return mskTime.getTime() - mskOffset + (5*24*60*60*1000);
+}
+
+function formatExpiryDate(dateStr) {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function checkSubscriptionExpiry() {
+  if (!currentUser || !currentUser.subscriptionExpiresAt) return;
+  const expiry = new Date(currentUser.subscriptionExpiresAt);
+  const now = new Date();
+  if (now > expiry && currentUser.subscriptionPlan !== 'Free') {
+    currentUser.subscriptionPlan = 'Free';
+    currentUser.subscriptionExpiresAt = null;
+    if (db) {
+      const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid);
+      updateDoc(userDocRef, { subscriptionPlan: 'Free', subscriptionExpiresAt: null });
+    }
+    updateProfileUI();
+    window.showToast("⏰ Ваша подписка истекла. Вы переведены на тариф Free.");
+  }
 }
 
 window.onload = async function() {
@@ -759,7 +792,6 @@ window.onload = async function() {
     document.body.classList.add('light-theme');
   }
   
-  // Закрытие модального окна обложки по клику вне контента
   document.getElementById('cover-modal')?.addEventListener('click', function(e) {
     if (e.target === this) hideCoverModal();
   });
@@ -791,6 +823,9 @@ async function loadUserProfile(user) {
     await updateDoc(userDocRef, { tracksUploadedCount: 0, limitResetTime: currentUser.limitResetTime });
   }
   
+  // Проверка истечения подписки
+  checkSubscriptionExpiry();
+  
   updateProfileUI();
   listenToDatabaseUpdates();
 }
@@ -814,6 +849,15 @@ function updateProfileUI() {
     subBadge.className = "px-3 py-1 bg-amber-500/10 text-amber-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-amber-500/20";
   } else {
     subBadge.className = "px-3 py-1 bg-neutral-800 text-neutral-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-neutral-700";
+  }
+  
+  // Отображение даты окончания подписки
+  const expiryEl = document.getElementById('profile-subscription-expiry');
+  if (currentUser.subscriptionPlan !== 'Free' && currentUser.subscriptionExpiresAt) {
+    expiryEl.innerText = `Подписка действует до: ${formatExpiryDate(currentUser.subscriptionExpiresAt)}`;
+    expiryEl.className = "mt-2 text-xs text-amber-400 font-medium";
+  } else {
+    expiryEl.innerText = '';
   }
   
   const limits = getSubscriptionLimits(currentUser.subscriptionPlan);
@@ -968,12 +1012,11 @@ window.closeInfoModal = function() {
   if (modal) modal.remove();
 };
 
-// === РЕКЛАМНАЯ СИСТЕМА (ИСПРАВЛЕННАЯ) ===
+// === РЕКЛАМНАЯ СИСТЕМА ===
 function shouldShowAd() {
   if (!currentUser) return false;
   const limits = getSubscriptionLimits(currentUser.subscriptionPlan);
   if (limits.adEvery === Infinity) return false;
-  // Реклама показывается ТОЛЬКО после того, как трек был прослушан до конца
   if (!trackPlayed) return false;
   currentAdCount++;
   return currentAdCount % limits.adEvery === 0;
@@ -1005,7 +1048,6 @@ async function playAdIfNeeded() {
     });
     
     adPlayer.pause();
-    // Сбрасываем флаг после показа рекламы
     trackPlayed = false;
     return true;
   } catch (e) {
@@ -1191,7 +1233,7 @@ window.handleSearch = function(query) {
         </div>`).join('');
 };
 
-// === ВОСПРОИЗВЕДЕНИЕ С ИСПРАВЛЕННОЙ ЛОГИКОЙ РЕКЛАМЫ ===
+// === ВОСПРОИЗВЕДЕНИЕ С ИСПРАВЛЕННОЙ ЛОГИКОЙ ===
 window.togglePlay = async function() {
   const audio = document.getElementById('audio-player');
   const playIcon = document.getElementById('play-icon-svg');
@@ -1203,7 +1245,6 @@ window.togglePlay = async function() {
     playIcon.className = "fa-solid fa-play text-lg text-black";
     cover?.classList.remove('pulsing-cover');
   } else {
-    // Проверяем рекламу ТОЛЬКО если трек уже был прослушан
     const adPlayed = await playAdIfNeeded();
     if (adPlayed) {
       audio.play().then(() => {
@@ -1222,7 +1263,6 @@ window.togglePlay = async function() {
 };
 
 window.nextTrack = async function() {
-  // Сбрасываем флаг "трек прослушан" при переходе к следующему
   trackPlayed = false;
   
   if (shouldShowAd()) {
@@ -1266,6 +1306,23 @@ window.hideCoverModal = function() {
   setTimeout(() => modal.classList.add('hidden'), 200);
 };
 
+// === СКРЫТИЕ/ПОКАЗ ПЛЕЕРА ===
+window.togglePlayerVisibility = function() {
+  playerVisible = !playerVisible;
+  const footer = document.getElementById('footer-player');
+  const toggleBtn = document.getElementById('player-toggle-btn');
+  
+  if (playerVisible) {
+    footer.style.transform = 'translateY(0)';
+    footer.style.height = '96px';
+    toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-down text-sm"></i>';
+  } else {
+    footer.style.transform = 'translateY(calc(100% - 60px))';
+    footer.style.height = '60px';
+    toggleBtn.innerHTML = '<i class="fa-solid fa-chevron-up text-sm"></i>';
+  }
+};
+
 // === ОСТАЛЬНЫЕ ФУНКЦИИ (полные реализации) ===
 window.selectTrack = function(index, startPlaying = true) {
   if (activePlaylist.length === 0) activePlaylist = tracks;
@@ -1273,7 +1330,10 @@ window.selectTrack = function(index, startPlaying = true) {
   currentTrackIndex = index;
   const track = activePlaylist[currentTrackIndex];
   const audio = document.getElementById('audio-player');
-  audio.src = track.url;
+  
+  // Исправление: используем демо-трек с правильной длительностью
+  audio.src = track.url || "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+  
   document.getElementById('current-track-title').innerText = track.title;
   document.getElementById('current-track-artist').innerText = track.artist;
   document.getElementById('current-track-cover').src = track.cover;
@@ -1294,7 +1354,6 @@ window.selectTrack = function(index, startPlaying = true) {
   }
   updateFavoriteUI();
   
-  // Сбрасываем флаг "трек прослушан" при выборе нового трека
   trackPlayed = false;
   
   if (startPlaying) {
@@ -1539,14 +1598,18 @@ window.submitNewTrack = async function() {
   const coverUrl = document.getElementById('track-upload-cover').value.trim() || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop";
   const audioFile = document.getElementById('track-upload-audio').files[0];
   if (!title || !audioFile) { window.showToast("⚠️ Название и файл обязательны!"); return; }
+  
   const trackId = "track_" + Date.now();
   const artist = artistInput || currentUser.name;
+  
+  // В демо-режиме используем заглушку, но сохраняем метаданные
   const newTrack = {
     id: trackId, title: title, artist: artist,
     url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
     cover: coverUrl, coverStatus: "pending", uploadedBy: currentUser.uid,
-    duration: "03:40", lyrics: []
+    duration: "03:40", lyrics: [], originalFileName: audioFile?.name
   };
+  
   if (db) {
     await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks', trackId), newTrack);
     currentUser.tracksUploadedCount++;
@@ -1626,7 +1689,7 @@ window.renderProfilePlaylists = function() {
   });
 };
 
-// === ПОТОК ПОДПИСКИ (ИСПРАВЛЕННЫЙ) ===
+// === ПОТОК ПОДПИСКИ С ПРОВЕРКОЙ ПЛАНА+ПЕРИОДА ===
 window.openSubscriptionModal = function() {
   selectedPlan = null;
   selectedPeriod = null;
@@ -1665,24 +1728,35 @@ window.closePromoModal = function() {
 window.submitPromoCode = async function() {
   const code = document.getElementById('promo-input-code').value.trim();
   if (!code || !db) return;
+  
   const promoDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'promoCodes', code);
   const promoDoc = await getDoc(promoDocRef);
+  
   if (!promoDoc.exists() || promoDoc.data().status !== 'active') {
     window.showToast("⚠️ Промокод недействителен или уже активирован!");
     return;
   }
+  
   const promoData = promoDoc.data();
+  
+  // 🔥 ПРОВЕРКА: промокод должен точно соответствовать плану и периоду
+  if (promoData.plan !== selectedPlan || promoData.periodMonths !== selectedPeriod) {
+    window.showToast(`⚠️ Этот промокод действителен только для ${promoData.plan} на ${promoData.periodMonths} мес.!`);
+    return;
+  }
+  
   const expirationDate = new Date();
   expirationDate.setMonth(expirationDate.getMonth() + promoData.periodMonths);
   currentUser.subscriptionPlan = promoData.plan;
   currentUser.subscriptionExpiresAt = expirationDate.toLocaleDateString('ru-RU');
+  
   const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', currentUser.uid);
   await updateDoc(userDocRef, { subscriptionPlan: promoData.plan, subscriptionExpiresAt: expirationDate.toLocaleDateString('ru-RU') });
   await updateDoc(promoDocRef, { status: "used" });
+  
   updateProfileUI();
   closePromoModal();
   
-  // Показываем результат
   document.getElementById('promo-result-plan').innerText = promoData.plan;
   document.getElementById('promo-result-period').innerText = promoData.periodMonths + " месяц" + (promoData.periodMonths > 1 ? 'а' : '');
   document.getElementById('promo-result-modal')?.classList.remove('hidden');
@@ -1958,6 +2032,7 @@ window.generatePromoCode = async function() {
   const plan = document.getElementById('promo-plan').value;
   const period = parseInt(document.getElementById('promo-period').value);
   const randomCode = "SW-" + plan + "-" + period + "M-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+  // 🔥 Промокод теперь содержит план и период для строгой валидации
   const promo = { code: randomCode, plan: plan, periodMonths: period, status: "active" };
   if (db) await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'promoCodes', randomCode), promo);
   document.getElementById('promo-code-output').innerText = randomCode;
@@ -2169,14 +2244,23 @@ async function loadStaticTracks() { tracks = [...staticTracks]; }
 
 let activeLyricsList = [], tempLyrics = [], currentSupportImageBase64 = null, activePlaylistViewId = null, isRegisterMode = false;
 
-// Событие окончания трека — устанавливаем флаг "трек прослушан"
+// Событие окончания трека
 const audioPlayer = document.getElementById('audio-player');
+audioPlayer.addEventListener('timeupdate', () => {
+  if (!audioPlayer.duration) return;
+  const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+  document.getElementById('timeline-progress').style.width = `${progress}%`;
+  document.getElementById('current-time').innerText = formatTime(audioPlayer.currentTime);
+  document.getElementById('total-time').innerText = formatTime(audioPlayer.duration);
+  updateActiveLyrics(audioPlayer.currentTime);
+});
+
 audioPlayer.addEventListener('ended', () => {
-  trackPlayed = true; // Теперь можно показывать рекламу при следующем треке
+  trackPlayed = true; // Теперь можно показывать рекламу
   if (repeatMode) {
     audioPlayer.currentTime = 0;
     audioPlayer.play();
-    trackPlayed = false; // При повторе сбрасываем
+    trackPlayed = false;
   } else {
     window.nextTrack();
   }
