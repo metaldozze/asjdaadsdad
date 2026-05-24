@@ -11,13 +11,30 @@
 body { font-family: 'Inter', sans-serif; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #0f0f15; }
-::-webkit-scrollbar-thumb { background: #312e81; border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: #312e81; border-radius: 10px; transition: background 0.2s; }
 ::-webkit-scrollbar-thumb:hover { background: #4f46e5; }
 @keyframes pulse-slow {
   0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.4)); }
   50% { transform: scale(1.03); filter: drop-shadow(0 0 25px rgba(168, 85, 247, 0.7)); }
 }
 .pulsing-cover { animation: pulse-slow 4s infinite ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeOut { from { opacity: 1; transform: translateY(0); } to { opacity: 0; transform: translateY(10px); } }
+@keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-20px); opacity: 0; } }
+.animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+.animate-fade-out { animation: fadeOut 0.3s ease-out forwards; }
+.animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
+.animate-slide-out { animation: slideOut 0.3s ease-out forwards; }
+.modal-enter { animation: fadeIn 0.2s ease-out; }
+.modal-exit { animation: fadeOut 0.2s ease-out; }
+.cover-zoom { transition: transform 0.3s ease; }
+.cover-zoom:hover { transform: scale(1.05); }
+.btn-hover { transition: all 0.2s ease; }
+.btn-hover:hover { transform: translateY(-2px); }
+.btn-hover:active { transform: translateY(0); }
+.toast-enter { animation: slideIn 0.3s ease-out; }
+.toast-exit { animation: slideOut 0.3s ease-out; }
 body.light-theme {
   --bg-primary: #f8fafc; --bg-secondary: #ffffff; --text-primary: #0f172a;
   --text-secondary: #475569; --border-color: #e2e8f0;
@@ -31,16 +48,21 @@ body.light-theme .bg-neutral-800 { background-color: #e2e8f0 !important; }
 body.light-theme input, body.light-theme textarea, body.light-theme select {
   background-color: #f8fafc !important; color: #0f172a !important; border-color: #cbd5e1 !important;
 }
+.cover-modal { transition: opacity 0.2s ease; }
+.cover-modal.hidden { opacity: 0; pointer-events: none; }
+.cover-modal:not(.hidden) { opacity: 1; pointer-events: auto; }
+.cover-modal-content { transition: transform 0.2s ease, opacity 0.2s ease; }
+.cover-modal.hidden .cover-modal-content { transform: scale(0.95); opacity: 0; }
 </style>
 </head>
-<body class="bg-neutral-950 text-neutral-100 h-full flex flex-col overflow-hidden select-none">
+<body class="bg-neutral-950 text-neutral-100 h-full flex flex-col overflow-hidden select-none transition-colors duration-300">
 <div id="app-root" class="flex flex-1 h-full overflow-hidden">
 
 <!-- Боковая панель -->
-<aside class="w-64 bg-neutral-900 border-r border-neutral-800 flex flex-col justify-between hidden md:flex z-20">
+<aside class="w-64 bg-neutral-900 border-r border-neutral-800 flex flex-col justify-between hidden md:flex z-20 transition-all duration-300">
 <div class="p-6">
 <div class="flex items-center space-x-3 mb-8 cursor-pointer group" onclick="switchTab('home')">
-<div class="w-10 h-10 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-900/30 group-hover:scale-105 transition-transform">
+<div class="w-10 h-10 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-violet-900/30 group-hover:scale-105 transition-transform duration-200">
 <i class="fa-solid fa-music text-white text-xl"></i>
 </div>
 <span class="text-xl font-bold tracking-wider bg-gradient-to-r from-white via-indigo-200 to-violet-400 bg-clip-text text-transparent">SoundWave</span>
@@ -68,7 +90,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <i class="fa-solid fa-shield-halved w-5 text-center"></i><span>Панель админа</span>
 </button>
 </nav>
-<div class="h-[1px] bg-neutral-800 my-6"></div>
+<div class="h-[1px] bg-neutral-800 my-6 transition-colors duration-300"></div>
 <div class="space-y-4">
 <div class="flex items-center justify-between text-xs font-semibold text-neutral-500 uppercase tracking-wider px-4">
 <span>Плейлисты</span>
@@ -77,21 +99,21 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <div id="sidebar-playlists" class="space-y-1 max-h-[180px] overflow-y-auto pr-1"></div>
 </div>
 </div>
-<div class="p-4 border-t border-neutral-800 bg-neutral-950/40 space-y-2">
+<div class="p-4 border-t border-neutral-800 bg-neutral-950/40 space-y-2 transition-colors duration-300">
 <div class="flex justify-between items-center px-2 mb-1">
 <span class="text-xs text-neutral-400">Лимит треков (5д):</span>
 <span id="sidebar-limit-text" class="text-xs font-bold text-violet-400">2/2</span>
 </div>
-<button onclick="openUploadTrackModal()" class="flex items-center justify-center space-x-2 w-full py-2.5 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl font-medium transition-all duration-300 shadow-md shadow-indigo-900/20 active:scale-95 text-sm">
+<button onclick="openUploadTrackModal()" class="flex items-center justify-center space-x-2 w-full py-2.5 px-4 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl font-medium transition-all duration-300 shadow-md shadow-indigo-900/20 active:scale-95 text-sm btn-hover">
 <i class="fa-solid fa-cloud-arrow-up"></i><span>Выложить трек</span>
 </button>
-<button onclick="openImportModal()" class="flex items-center justify-center space-x-2 w-full py-2 px-4 border border-neutral-700 hover:border-violet-500 hover:text-violet-400 rounded-xl font-medium transition-all duration-300 active:scale-95 text-xs text-neutral-400">
+<button onclick="openImportModal()" class="flex items-center justify-center space-x-2 w-full py-2 px-4 border border-neutral-700 hover:border-violet-500 hover:text-violet-400 rounded-xl font-medium transition-all duration-300 active:scale-95 text-xs text-neutral-400 btn-hover">
 <i class="fa-solid fa-file-import"></i><span>Импорт треков</span>
 </button>
 </div>
 </aside>
 
-<main class="flex-1 flex flex-col bg-gradient-to-b from-indigo-950/20 via-neutral-950 to-neutral-950 overflow-y-auto relative pb-32">
+<main class="flex-1 flex flex-col bg-gradient-to-b from-indigo-950/20 via-neutral-950 to-neutral-950 overflow-y-auto relative pb-32 transition-colors duration-300">
 
 <!-- Мобильная шапка -->
 <header class="flex md:hidden items-center justify-between px-6 py-4 bg-neutral-900/80 backdrop-blur-md sticky top-0 z-30 border-b border-neutral-800">
@@ -102,15 +124,15 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <span class="text-lg font-bold bg-gradient-to-r from-white to-violet-400 bg-clip-text text-transparent">SoundWave</span>
 </div>
 <div class="flex items-center space-x-2">
-<button onclick="openSettingsModal()" class="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700"><i class="fa-solid fa-gear text-neutral-300 text-sm"></i></button>
-<button onclick="switchTab('search')" class="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700"><i class="fa-solid fa-magnifying-glass text-neutral-300 text-sm"></i></button>
-<button onclick="switchTab('library')" class="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700"><i class="fa-solid fa-layer-group text-neutral-300 text-sm"></i></button>
-<button onclick="switchTab('profile')" class="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700"><i class="fa-solid fa-user text-neutral-300 text-sm"></i></button>
+<button onclick="openSettingsModal()" class="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700 transition-colors"><i class="fa-solid fa-gear text-neutral-300 text-sm"></i></button>
+<button onclick="switchTab('search')" class="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700 transition-colors"><i class="fa-solid fa-magnifying-glass text-neutral-300 text-sm"></i></button>
+<button onclick="switchTab('library')" class="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700 transition-colors"><i class="fa-solid fa-layer-group text-neutral-300 text-sm"></i></button>
+<button onclick="switchTab('profile')" class="p-2 bg-neutral-800 rounded-full hover:bg-neutral-700 transition-colors"><i class="fa-solid fa-user text-neutral-300 text-sm"></i></button>
 </div>
 </header>
 
 <!-- Вкладка: Главная -->
-<section id="tab-home" class="p-6 md:p-8 space-y-8">
+<section id="tab-home" class="p-6 md:p-8 space-y-8 animate-fade-in">
 <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-900 via-purple-900 to-slate-900 p-8 md:p-12 flex flex-col md:flex-row items-center justify-between shadow-2xl shadow-indigo-950/40">
 <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(139,92,246,0.3),transparent)] pointer-events-none"></div>
 <div class="relative z-10 max-w-xl text-center md:text-left space-y-4 mb-6 md:mb-0">
@@ -118,15 +140,15 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <h1 class="text-3xl md:text-5xl font-black tracking-tight leading-tight">Почувствуй Свободу Ритма</h1>
 <p class="text-neutral-300 text-sm md:text-base font-light">Слушайте любимую музыку без ограничений, создавайте собственные плейлисты и загружайте личные MP3-треки в одно касание.</p>
 <div class="flex flex-wrap gap-4 pt-2 justify-center md:justify-start">
-<button onclick="playFeaturedSong()" class="px-6 py-3 bg-white text-neutral-950 hover:bg-neutral-100 font-bold rounded-full shadow-lg shadow-white/10 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center space-x-2">
+<button onclick="playFeaturedSong()" class="px-6 py-3 bg-white text-neutral-950 hover:bg-neutral-100 font-bold rounded-full shadow-lg shadow-white/10 hover:scale-105 active:scale-95 transition-all duration-300 flex items-center space-x-2 btn-hover">
 <i class="fa-solid fa-play text-black"></i><span>Слушать хит</span>
 </button>
-<button onclick="switchTab('library')" class="px-6 py-3 bg-neutral-900/60 backdrop-blur border border-neutral-700/50 hover:bg-neutral-800 text-white font-semibold rounded-full hover:scale-105 active:scale-95 transition-all duration-300">Моя медиатека</button>
+<button onclick="switchTab('library')" class="px-6 py-3 bg-neutral-900/60 backdrop-blur border border-neutral-700/50 hover:bg-neutral-800 text-white font-semibold rounded-full hover:scale-105 active:scale-95 transition-all duration-300 btn-hover">Моя медиатека</button>
 </div>
 </div>
 <div class="relative w-48 h-48 md:w-56 md:h-56 flex-shrink-0">
 <div class="absolute inset-0 bg-violet-500 rounded-3xl blur-2xl opacity-40"></div>
-<img id="featured-banner-img" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop" alt="Featured Cover" class="w-full h-full object-cover rounded-3xl relative z-10 border border-violet-500/30 shadow-2xl">
+<img id="featured-banner-img" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop" alt="Featured Cover" class="w-full h-full object-cover rounded-3xl relative z-10 border border-violet-500/30 shadow-2xl cover-zoom cursor-pointer" onclick="showCoverModal('https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300', 'Хит недели', 'SoundWave Exclusive')">
 </div>
 </div>
 <div class="space-y-4">
@@ -159,7 +181,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </section>
 
 <!-- Вкладка: Поиск -->
-<section id="tab-search" class="p-6 md:p-8 space-y-6 hidden">
+<section id="tab-search" class="p-6 md:p-8 space-y-6 hidden animate-fade-in">
 <div class="space-y-2">
 <h2 class="text-2xl font-extrabold tracking-tight">Поиск музыки и плейлистов</h2>
 <p class="text-xs text-neutral-400">Ищите любимых исполнителей, треки или публичные плейлисты.</p>
@@ -181,7 +203,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </section>
 
 <!-- Вкладка: Медиатека -->
-<section id="tab-library" class="p-6 md:p-8 space-y-8 hidden">
+<section id="tab-library" class="p-6 md:p-8 space-y-8 hidden animate-fade-in">
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-neutral-800 pb-6">
 <div>
 <h2 class="text-2xl font-extrabold tracking-tight">Моя медиатека</h2>
@@ -207,11 +229,11 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </section>
 
 <!-- Вкладка: Профиль -->
-<section id="tab-profile" class="p-6 md:p-8 space-y-8 hidden">
+<section id="tab-profile" class="p-6 md:p-8 space-y-8 hidden animate-fade-in">
 <div class="bg-neutral-900/60 border border-neutral-800/80 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl relative">
 <div class="flex flex-col md:flex-row items-center gap-6 w-full">
 <div class="relative w-32 h-32 md:w-36 md:h-36 rounded-full overflow-hidden border-2 border-violet-500 shadow-lg bg-neutral-950 group">
-<img id="profile-avatar-img" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop" class="w-full h-full object-cover" alt="User Avatar">
+<img id="profile-avatar-img" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop" class="w-full h-full object-cover cover-zoom cursor-pointer" alt="User Avatar" onclick="showCoverModal(this.src, currentUser?.name || 'Пользователь', '@' + (currentUser?.username || 'user'))">
 <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center cursor-pointer transition-opacity" onclick="triggerAvatarUpload()">
 <i class="fa-solid fa-camera text-white text-xl mb-1"></i>
 <span class="text-[10px] text-neutral-300 text-center px-2">Сменить аватар</span>
@@ -233,7 +255,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <p class="text-xs text-neutral-400">На платформе с: <span id="profile-joined-date">01.01.2026</span></p>
 <div class="pt-2 flex flex-wrap justify-center md:justify-start gap-2">
 <span id="profile-subscription-badge" class="px-3 py-1 bg-neutral-800 text-neutral-400 rounded-full text-xs font-bold border border-neutral-700 uppercase tracking-widest">Бесплатный план</span>
-<button onclick="openSubscriptionModal()" class="px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 rounded-full text-xs font-bold shadow-md transition-all active:scale-95">Улучшить план</button>
+<button onclick="openSubscriptionModal()" class="px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 rounded-full text-xs font-bold shadow-md transition-all active:scale-95 btn-hover">Улучшить план</button>
 </div>
 </div>
 </div>
@@ -247,7 +269,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </section>
 
 <!-- Вкладка: Поддержка -->
-<section id="tab-support" class="p-6 md:p-8 space-y-6 hidden">
+<section id="tab-support" class="p-6 md:p-8 space-y-6 hidden animate-fade-in">
 <div class="space-y-2">
 <h2 class="text-2xl font-extrabold tracking-tight">Чат поддержки</h2>
 <p class="text-sm text-neutral-400">Задайте вопрос нашей команде. Только вы и администратор видят этот чат.</p>
@@ -260,13 +282,13 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <input type="file" id="support-image-input" accept="image/*" class="hidden" onchange="handleSupportImage(event)">
 </label>
 <input type="text" id="support-msg-input" placeholder="Напишите сообщение..." class="flex-1 py-3 px-4 bg-neutral-900 border border-neutral-800 rounded-xl text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-violet-600">
-<button onclick="sendSupportMessage()" class="px-5 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl font-bold transition-all active:scale-95">Отправить</button>
+<button onclick="sendSupportMessage()" class="px-5 py-3 bg-violet-600 hover:bg-violet-500 rounded-xl font-bold transition-all active:scale-95 btn-hover">Отправить</button>
 </div>
 </div>
 </section>
 
 <!-- Вкладка: Админ -->
-<section id="tab-admin" class="p-6 md:p-8 space-y-8 hidden">
+<section id="tab-admin" class="p-6 md:p-8 space-y-8 hidden animate-fade-in">
 <div class="border-b border-amber-500/20 pb-4">
 <h2 class="text-3xl font-black text-amber-400 flex items-center space-x-3"><i class="fa-solid fa-toolbox"></i><span>Центр управления SoundWave (Admin)</span></h2>
 <p class="text-sm text-neutral-400 mt-1">Очередь модерации контента, генератор промокодов и чат техподдержки.</p>
@@ -285,7 +307,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <div><label class="block text-xs text-neutral-400 font-semibold mb-1">Период действия</label>
 <select id="promo-period" class="w-full p-2.5 bg-neutral-950 border border-neutral-800 rounded-xl text-sm"><option value="1">1 месяц</option><option value="3">3 месяца</option><option value="6">6 месяцев</option></select></div>
 </div>
-<button onclick="generatePromoCode()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold rounded-xl transition-all active:scale-95 text-sm">Сгенерировать промокод</button>
+<button onclick="generatePromoCode()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold rounded-xl transition-all active:scale-95 text-sm btn-hover">Сгенерировать промокод</button>
 <div id="generated-promo-display" class="p-3 bg-neutral-950/60 border border-neutral-800 rounded-xl text-center hidden">
 <span class="text-xs text-neutral-400 block">Ваш промокод:</span>
 <span id="promo-code-output" class="text-lg font-mono font-bold text-amber-400 tracking-wider">CODE-XXXX</span>
@@ -298,7 +320,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <div id="admin-support-chat-container" class="space-y-3 h-[250px] overflow-y-auto bg-neutral-950 p-4 rounded-xl border border-neutral-800"></div>
 <div class="flex items-center gap-2">
 <input type="text" id="admin-reply-input" placeholder="Введите ответ в формате @userId текст сообщения..." class="flex-1 py-2.5 px-3 bg-neutral-950 border border-neutral-800 rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-violet-600 text-white">
-<button onclick="sendAdminReply()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-sm transition-all">Ответить</button>
+<button onclick="sendAdminReply()" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-bold text-sm transition-all btn-hover">Ответить</button>
 </div>
 </div>
 <div class="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-6 space-y-4">
@@ -310,18 +332,18 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <div class="flex gap-2">
 <input type="number" id="lyrics-timer" placeholder="Время (сек)" class="w-24 p-2 bg-neutral-950 border border-neutral-800 rounded-xl text-sm text-white text-center">
 <input type="text" id="lyrics-text" placeholder="Припев: Я лечу над городом..." class="flex-1 p-2 bg-neutral-950 border border-neutral-800 rounded-xl text-sm text-white">
-<button onclick="addLyricLine()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-sm transition-all">+</button>
+<button onclick="addLyricLine()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-xl font-bold text-sm transition-all btn-hover">+</button>
 </div>
 </div>
 <div id="added-lyrics-preview" class="p-3 bg-neutral-950 border border-neutral-800 rounded-xl max-h-[100px] overflow-y-auto text-xs text-neutral-400 space-y-1"></div>
-<button onclick="saveLyricsForTrack()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl transition-all text-sm active:scale-95">Привязать текст к треку</button>
+<button onclick="saveLyricsForTrack()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 font-bold rounded-xl transition-all text-sm active:scale-95 btn-hover">Привязать текст к треку</button>
 </div>
 </div>
 </div>
 </section>
 
 <!-- Вкладка: Плейлист -->
-<section id="tab-playlist-view" class="p-6 md:p-8 space-y-6 hidden">
+<section id="tab-playlist-view" class="p-6 md:p-8 space-y-6 hidden animate-fade-in">
 <div class="flex flex-col md:flex-row items-center gap-6 border-b border-neutral-800 pb-8">
 <div class="w-40 h-40 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg relative group">
 <i class="fa-solid fa-compact-disc text-white text-6xl"></i>
@@ -331,8 +353,8 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <h2 id="playlist-view-title" class="text-3xl md:text-5xl font-extrabold tracking-tight">Название плейлиста</h2>
 <p id="playlist-view-desc" class="text-sm text-neutral-400">Кастомный плейлист пользователя.</p>
 <div class="flex items-center justify-center md:justify-start gap-4 pt-3">
-<button id="playlist-play-btn" class="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 font-bold rounded-full text-sm">Включить плейлист</button>
-<button id="playlist-shuffle-btn" class="px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-full text-sm flex items-center space-x-2"><i class="fa-solid fa-shuffle"></i> <span>Перемешать</span></button>
+<button id="playlist-play-btn" class="px-6 py-2.5 bg-violet-600 hover:bg-violet-700 font-bold rounded-full text-sm btn-hover">Включить плейлист</button>
+<button id="playlist-shuffle-btn" class="px-4 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-full text-sm flex items-center space-x-2 btn-hover"><i class="fa-solid fa-shuffle"></i> <span>Перемешать</span></button>
 <button id="playlist-delete-btn" class="text-sm text-rose-400 hover:text-rose-500 underline font-medium">Удалить плейлист</button>
 </div>
 </div>
@@ -346,14 +368,14 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </main>
 
 <!-- Правая панель: Плеер и слова -->
-<aside id="right-lyrics-panel" class="w-80 bg-neutral-900 border-l border-neutral-800 flex flex-col hidden lg:flex relative z-10">
+<aside id="right-lyrics-panel" class="w-80 bg-neutral-900 border-l border-neutral-800 flex flex-col hidden lg:flex relative z-10 transition-all duration-300">
 <div class="p-4 border-b border-neutral-800 flex items-center justify-between">
 <span class="font-bold text-sm tracking-wide text-neutral-300">Плеер & Слова</span>
 <button onclick="toggleLyricsPanel()" class="text-neutral-500 hover:text-white transition-colors"><i class="fa-solid fa-xmark"></i></button>
 </div>
 <div class="p-6 flex-1 flex flex-col justify-between overflow-y-auto space-y-6">
 <div class="flex flex-col items-center text-center space-y-4">
-<div class="w-40 h-40 rounded-2xl overflow-hidden shadow-2xl bg-neutral-950 border border-neutral-800">
+<div class="w-40 h-40 rounded-2xl overflow-hidden shadow-2xl bg-neutral-950 border border-neutral-800 cover-zoom cursor-pointer" onclick="showCoverModal(document.getElementById('lyrics-track-cover').src, document.getElementById('lyrics-track-title').innerText, document.getElementById('lyrics-track-artist').innerText)">
 <img id="lyrics-track-cover" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=200&auto=format&fit=crop" alt="Cover" class="w-full h-full object-cover">
 </div>
 <div>
@@ -373,11 +395,11 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </div>
 
 <!-- Плеер -->
-<footer class="fixed bottom-0 left-0 right-0 h-24 bg-neutral-900/95 backdrop-blur-md border-t border-neutral-800/80 px-6 py-4 flex items-center justify-between z-40 shadow-2xl">
+<footer class="fixed bottom-0 left-0 right-0 h-24 bg-neutral-900/95 backdrop-blur-md border-t border-neutral-800/80 px-6 py-4 flex items-center justify-between z-40 shadow-2xl transition-colors duration-300">
 <div class="flex items-center space-x-4 w-1/3 min-w-0">
-<div class="relative w-14 h-14 rounded-xl overflow-hidden shadow-md flex-shrink-0 bg-neutral-950 border border-neutral-800 group">
+<div class="relative w-14 h-14 rounded-xl overflow-hidden shadow-md flex-shrink-0 bg-neutral-950 border border-neutral-800 group cover-zoom cursor-pointer" onclick="showCoverModal(document.getElementById('current-track-cover').src, document.getElementById('current-track-title').innerText, document.getElementById('current-track-artist').innerText)">
 <img id="current-track-cover" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=100&auto=format&fit=crop" alt="Track Cover" class="w-full h-full object-cover">
-<div onclick="toggleLyricsPanel()" class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
+<div onclick="toggleLyricsPanel(); event.stopPropagation();" class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition-opacity">
 <i class="fa-solid fa-eye text-white text-sm"></i>
 </div>
 </div>
@@ -392,13 +414,13 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </div>
 <div class="flex flex-col items-center w-1/3 space-y-2">
 <div class="flex items-center space-x-6">
-<button id="shuffle-btn" onclick="toggleShuffle()" class="text-neutral-500 hover:text-white transition-colors" title="Перемешать"><i class="fa-solid fa-shuffle text-sm"></i></button>
-<button onclick="prevTrack()" class="text-neutral-400 hover:text-white active:scale-90 transition-all" title="Назад"><i class="fa-solid fa-backward-step text-lg"></i></button>
-<button id="main-play-btn" onclick="togglePlay()" class="w-12 h-12 bg-white hover:bg-neutral-100 text-neutral-950 rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all duration-300" title="Воспроизведение/Пауза">
+<button id="shuffle-btn" onclick="toggleShuffle()" class="text-neutral-500 hover:text-white transition-colors btn-hover" title="Перемешать"><i class="fa-solid fa-shuffle text-sm"></i></button>
+<button onclick="prevTrack()" class="text-neutral-400 hover:text-white active:scale-90 transition-all btn-hover" title="Назад"><i class="fa-solid fa-backward-step text-lg"></i></button>
+<button id="main-play-btn" onclick="togglePlay()" class="w-12 h-12 bg-white hover:bg-neutral-100 text-neutral-950 rounded-full flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all duration-300 btn-hover" title="Воспроизведение/Пауза">
 <i id="play-icon-svg" class="fa-solid fa-play text-lg text-black"></i>
 </button>
-<button onclick="nextTrack()" class="text-neutral-400 hover:text-white active:scale-90 transition-all" title="Вперед"><i class="fa-solid fa-forward-step text-lg"></i></button>
-<button id="repeat-btn" onclick="toggleRepeat()" class="text-neutral-500 hover:text-white transition-colors" title="Повторять"><i class="fa-solid fa-repeat text-sm"></i></button>
+<button onclick="nextTrack()" class="text-neutral-400 hover:text-white active:scale-90 transition-all btn-hover" title="Вперед"><i class="fa-solid fa-forward-step text-lg"></i></button>
+<button id="repeat-btn" onclick="toggleRepeat()" class="text-neutral-500 hover:text-white transition-colors btn-hover" title="Повторять"><i class="fa-solid fa-repeat text-sm"></i></button>
 </div>
 <div class="flex items-center space-x-3 w-full max-w-md text-xs text-neutral-400">
 <span id="current-time">0:00</span>
@@ -413,11 +435,11 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </div>
 </div>
 <div class="flex items-center justify-end w-1/3 space-x-4">
-<button onclick="triggerAddToPlaylist()" class="text-neutral-400 hover:text-violet-400 transition-colors" title="Добавить в плейлист"><i class="fa-solid fa-folder-plus text-lg"></i></button>
-<button onclick="triggerRemoveFromPlaylist()" class="text-neutral-400 hover:text-rose-400 transition-colors" title="Убрать из плейлиста"><i class="fa-solid fa-folder-minus text-lg"></i></button>
-<button id="lyrics-btn-toggle" onclick="toggleLyricsWithState()" class="text-neutral-400 hover:text-violet-400 transition-colors text-lg" title="Показать слова"><i class="fa-solid fa-quote-right"></i></button>
+<button onclick="triggerAddToPlaylist()" class="text-neutral-400 hover:text-violet-400 transition-colors btn-hover" title="Добавить в плейлист"><i class="fa-solid fa-folder-plus text-lg"></i></button>
+<button onclick="triggerRemoveFromPlaylist()" class="text-neutral-400 hover:text-rose-400 transition-colors btn-hover" title="Убрать из плейлиста"><i class="fa-solid fa-folder-minus text-lg"></i></button>
+<button id="lyrics-btn-toggle" onclick="toggleLyricsWithState()" class="text-neutral-400 hover:text-violet-400 transition-colors text-lg btn-hover" title="Показать слова"><i class="fa-solid fa-quote-right"></i></button>
 <div class="flex items-center space-x-2 w-28 md:w-32">
-<button id="volume-toggle-btn" onclick="toggleMute()" class="text-neutral-400 hover:text-white transition-colors"><i id="volume-icon" class="fa-solid fa-volume-high text-sm"></i></button>
+<button id="volume-toggle-btn" onclick="toggleMute()" class="text-neutral-400 hover:text-white transition-colors btn-hover"><i id="volume-icon" class="fa-solid fa-volume-high text-sm"></i></button>
 <div class="relative flex-1 group h-4 flex items-center cursor-pointer" id="volume-container" onclick="setVolumeBySlider(event)">
 <div class="w-full bg-neutral-800 h-1 rounded-full group-hover:h-1.5 transition-all">
 <div id="volume-progress" class="bg-violet-500 h-full rounded-full relative w-[80%]">
@@ -429,8 +451,17 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </div>
 </footer>
 
+<!-- Модальное окно обложки трека -->
+<div id="cover-modal" class="cover-modal fixed inset-0 bg-black/90 backdrop-blur-md z-[100] flex items-center justify-center hidden">
+<div class="cover-modal-content bg-neutral-900 border border-neutral-800 rounded-3xl p-6 max-w-md w-full mx-4 text-center">
+<img id="cover-modal-img" src="" alt="Track Cover" class="w-full aspect-square object-cover rounded-2xl mb-4 shadow-2xl">
+<h3 id="cover-modal-title" class="text-xl font-bold text-white mb-1"></h3>
+<p id="cover-modal-artist" class="text-sm text-neutral-400"></p>
+</div>
+</div>
+
 <!-- Модальные окна: Аутентификация -->
-<div id="auth-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center">
+<div id="auth-modal" class="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center modal-enter">
 <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-md p-8 space-y-6 m-4 shadow-2xl relative">
 <div class="text-center space-y-2">
 <div class="w-12 h-12 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto">
@@ -454,7 +485,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <div id="auth-repeat-password-field" class="hidden">
 <label class="block text-xs text-neutral-400 font-semibold mb-1">Повторите пароль</label>
 <input type="password" id="auth-password-repeat" placeholder="••••••••" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-600 text-white text-sm"></div>
-<button type="submit" id="auth-submit-btn" class="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg active:scale-95 text-sm">Войти в систему</button>
+<button type="submit" id="auth-submit-btn" class="w-full py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg active:scale-95 text-sm btn-hover">Войти в систему</button>
 </form>
 <div class="text-center"><button onclick="toggleAuthMode()" id="auth-toggle-link" class="text-xs text-violet-400 hover:underline">Еще нет аккаунта? Зарегистрируйтесь</button></div>
 </div>
@@ -470,7 +501,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <h3 class="text-xl font-bold">Подтверждение почты</h3>
 <p class="text-sm text-neutral-400 leading-relaxed">Мы отправили письмо для подтверждения на указанную почту. Пожалуйста, перейдите по ссылке в письме и нажмите кнопку ниже.</p>
 </div>
-<button onclick="checkEmailVerifiedStatus()" class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl transition-all active:scale-95 text-sm">Я подтвердил почту</button>
+<button onclick="checkEmailVerifiedStatus()" class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl transition-all active:scale-95 text-sm btn-hover">Я подтвердил почту</button>
 </div>
 </div>
 
@@ -493,7 +524,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </div>
 <div class="flex items-center justify-end space-x-3 pt-2">
 <button onclick="closeCreatePlaylistModal()" class="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">Отмена</button>
-<button onclick="saveNewPlaylist()" class="px-5 py-2 text-sm bg-violet-600 hover:bg-violet-700 rounded-xl font-semibold transition-all">Создать</button>
+<button onclick="saveNewPlaylist()" class="px-5 py-2 text-sm bg-violet-600 hover:bg-violet-700 rounded-xl font-semibold transition-all btn-hover">Создать</button>
 </div>
 </div>
 </div>
@@ -514,12 +545,12 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 </div>
 <div class="flex items-center justify-end space-x-3 pt-2">
 <button onclick="closeUploadTrackModal()" class="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">Отмена</button>
-<button onclick="submitNewTrack()" class="px-5 py-2 text-sm bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl font-semibold text-white transition-all">Выложить трек</button>
+<button onclick="submitNewTrack()" class="px-5 py-2 text-sm bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl font-semibold text-white transition-all btn-hover">Выложить трек</button>
 </div>
 </div>
 </div>
 
-<!-- Модальное окно импорта треков (Variant B) -->
+<!-- Модальное окно импорта треков -->
 <div id="import-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center hidden">
 <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-lg p-6 md:p-8 space-y-6 m-4 relative">
 <div id="import-step-instructions">
@@ -536,8 +567,8 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <p><strong class="text-white">Шаг 4.</strong> Нажмите кнопку ниже и загрузите текстовый файл. Наша система найдет совпадения в нашей базе и соберет их в новый плейлист!</p>
 </div>
 <div class="pt-6 flex justify-between gap-4">
-<button onclick="closeImportModal()" class="px-5 py-3 bg-neutral-800 hover:bg-neutral-700 font-bold rounded-xl text-sm transition-all text-neutral-300">Отмена</button>
-<button onclick="triggerImportFileInput()" class="flex-1 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-bold rounded-xl text-sm transition-all text-white flex items-center justify-center space-x-2">
+<button onclick="closeImportModal()" class="px-5 py-3 bg-neutral-800 hover:bg-neutral-700 font-bold rounded-xl text-sm transition-all text-neutral-300 btn-hover">Отмена</button>
+<button onclick="triggerImportFileInput()" class="flex-1 py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 font-bold rounded-xl text-sm transition-all text-white flex items-center justify-center space-x-2 btn-hover">
 <i class="fa-solid fa-file-arrow-up"></i><span>Прикрепить TXT файл</span>
 </button>
 </div>
@@ -552,7 +583,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <h4 class="text-lg font-bold text-rose-400 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i><span>Этих треков временно нет на нашей площадке:</span></h4>
 <div id="unmatched-tracks-list" class="bg-neutral-950 border border-neutral-800 p-4 rounded-xl max-h-[180px] overflow-y-auto space-y-1 text-xs text-neutral-400 font-mono"></div>
 <p class="text-xs text-neutral-300 leading-relaxed">Остальные треки успешно найдены! Нажмите «Хорошо», чтобы завершить создание плейлиста.</p>
-<div class="flex justify-end pt-2"><button onclick="proceedToCreateImportedPlaylist()" class="px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-sm transition-all active:scale-95">Хорошо</button></div>
+<div class="flex justify-end pt-2"><button onclick="proceedToCreateImportedPlaylist()" class="px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-sm transition-all active:scale-95 btn-hover">Хорошо</button></div>
 </div>
 <div id="import-step-playlist-name" class="hidden space-y-4">
 <div class="text-center space-y-2 mb-4"><h4 class="text-lg font-extrabold text-white">Завершение импорта</h4>
@@ -561,7 +592,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <input type="text" id="import-playlist-name-input" placeholder="Импортированный плейлист Spotify" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-violet-600 text-white"></div>
 <div class="flex justify-end gap-3 pt-2">
 <button onclick="closeImportModal()" class="px-4 py-2 text-sm text-neutral-400 hover:text-white">Отмена</button>
-<button onclick="saveImportedPlaylist()" class="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold rounded-xl text-sm transition-all">Создать и добавить</button>
+<button onclick="saveImportedPlaylist()" class="px-5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold rounded-xl text-sm transition-all btn-hover">Создать и добавить</button>
 </div>
 </div>
 </div>
@@ -584,7 +615,7 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <div class="flex justify-between items-center text-sm"><span class="text-neutral-400">3 Месяца:</span><span class="font-bold text-white">450 рублей</span></div>
 <div class="flex justify-between items-center text-sm"><span class="text-neutral-400">6 Месяцев:</span><span class="font-bold text-white">800 рублей</span></div>
 </div>
-<button onclick="selectSubscriptionPlan('ISP+')" class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl transition-all text-sm mt-4">Выбрать ISP+</button>
+<button onclick="selectSubscriptionPlan('ISP+')" class="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl transition-all text-sm mt-4 btn-hover">Выбрать ISP+</button>
 </div>
 <div class="bg-neutral-950/60 border border-amber-500/20 hover:border-amber-500/50 rounded-2xl p-6 space-y-4 relative flex flex-col justify-between">
 <div><span class="px-2.5 py-1 bg-amber-500/10 text-amber-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-amber-500/20">Профессионал</span>
@@ -595,20 +626,20 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <div class="flex justify-between items-center text-sm"><span class="text-neutral-400">3 Месяца:</span><span class="font-bold text-white">980 рублей</span></div>
 <div class="flex justify-between items-center text-sm"><span class="text-neutral-400">6 Месяцев:</span><span class="font-bold text-white">1500 рублей</span></div>
 </div>
-<button onclick="selectSubscriptionPlan('AUT++')" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold rounded-xl transition-all text-sm mt-4">Выбрать AUT++</button>
+<button onclick="selectSubscriptionPlan('AUT++')" class="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold rounded-xl transition-all text-sm mt-4 btn-hover">Выбрать AUT++</button>
 </div>
 </div>
 <div id="payment-block" class="bg-neutral-950 p-6 border border-neutral-800 rounded-2xl space-y-4 hidden">
 <h4 class="font-bold text-white text-sm">Оформление подписки <span id="payment-selected-plan" class="text-violet-400 font-extrabold">ISP+</span></h4>
 <div class="grid grid-cols-3 gap-3">
-<button id="period-1m-btn" onclick="selectPeriod(1)" class="p-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-xs font-bold text-center">1 Месяц</button>
-<button id="period-3m-btn" onclick="selectPeriod(3)" class="p-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-xs font-bold text-center">3 Месяца</button>
-<button id="period-6m-btn" onclick="selectPeriod(6)" class="p-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-xs font-bold text-center">6 Месяцев</button>
+<button id="period-1m-btn" onclick="selectPeriod(1)" class="p-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-xs font-bold text-center btn-hover">1 Месяц</button>
+<button id="period-3m-btn" onclick="selectPeriod(3)" class="p-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-xs font-bold text-center btn-hover">3 Месяца</button>
+<button id="period-6m-btn" onclick="selectPeriod(6)" class="p-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl text-xs font-bold text-center btn-hover">6 Месяцев</button>
 </div>
 <div class="flex justify-between items-center text-sm pt-2"><span class="text-neutral-400">Итого к оплате:</span><span id="payment-total-price" class="text-xl font-extrabold text-white">0 рублей</span></div>
 <div class="grid grid-cols-2 gap-4 pt-4">
-<button onclick="payWithCard()" class="py-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl font-bold text-sm text-neutral-300">Оплата картой</button>
-<button onclick="triggerPromoCode()" class="py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl font-bold text-sm text-white">Активировать промокод</button>
+<button onclick="payWithCard()" class="py-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 rounded-xl font-bold text-sm text-neutral-300 btn-hover">Оплата картой</button>
+<button onclick="triggerPromoCode()" class="py-3 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl font-bold text-sm text-white btn-hover">Промокод</button>
 </div>
 </div>
 <div class="flex justify-end pt-4 border-t border-neutral-800"><button onclick="closeSubscriptionModal()" class="px-5 py-2 text-sm text-neutral-400 hover:text-white">Закрыть</button></div>
@@ -621,8 +652,24 @@ body.light-theme input, body.light-theme textarea, body.light-theme select {
 <h3 class="text-xl font-bold text-white">Активация промокода</h3>
 <p class="text-xs text-neutral-400">Введите ваш одноразовый промокод, сгенерированный администратором платформы.</p>
 <input type="text" id="promo-input-code" placeholder="SW-ISP-1M-XXXXXX" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-center font-mono focus:outline-none focus:ring-1 focus:ring-violet-600 text-white">
-<button onclick="submitPromoCode()" class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl transition-all">Активировать</button>
+<button onclick="submitPromoCode()" class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl transition-all btn-hover">Получить</button>
 <button onclick="closePromoModal()" class="w-full py-2 text-xs text-neutral-500 hover:text-neutral-400">Отмена</button>
+</div>
+</div>
+
+<!-- Модальное окно результата промокода -->
+<div id="promo-result-modal" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center hidden">
+<div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-sm p-6 space-y-4 m-4 text-center">
+<div class="w-16 h-16 bg-green-500/10 border border-green-500/30 rounded-2xl flex items-center justify-center mx-auto text-green-400 text-2xl">
+<i class="fa-solid fa-check"></i>
+</div>
+<h3 class="text-xl font-bold text-white">Подписка активирована!</h3>
+<p class="text-sm text-neutral-400">Вы получили:</p>
+<div class="bg-neutral-950 p-4 rounded-xl text-left space-y-2">
+<p class="text-white font-semibold"><i class="fa-solid fa-tag text-violet-400 mr-2"></i><span id="promo-result-plan">ISP+</span></p>
+<p class="text-neutral-300 text-sm"><i class="fa-solid fa-calendar text-amber-400 mr-2"></i><span id="promo-result-period">1 месяц</span></p>
+</div>
+<button onclick="closePromoResultModal()" class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl transition-all btn-hover">Отлично</button>
 </div>
 </div>
 
@@ -662,6 +709,8 @@ let currentTrackIndex = 0, activePlaylist = [], tracks = [], playlists = [], mes
 let favoriteIds = JSON.parse(localStorage.getItem('favoriteIds') || '[]');
 let currentAdCount = 0, sessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2);
 let importedTracksMatched = [], importedTracksUnmatched = [];
+let selectedPlan = null, selectedPeriod = null;
+let trackPlayed = false; // Флаг: был ли трек прослушан до конца
 
 function transliterate(text) {
   const rus = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя", lat = ["a","b","v","g","d","e","e","zh","z","i","y","k","l","m","n","o","p","r","s","t","u","f","h","ts","ch","sh","shch","","y","","e","yu","ya"];
@@ -709,6 +758,11 @@ window.onload = async function() {
   if (localStorage.getItem('soundwave-theme') === 'light') {
     document.body.classList.add('light-theme');
   }
+  
+  // Закрытие модального окна обложки по клику вне контента
+  document.getElementById('cover-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) hideCoverModal();
+  });
 };
 
 async function loadUserProfile(user) {
@@ -777,25 +831,25 @@ function updateProfileUI() {
 window.openSettingsModal = function() {
   const modal = document.createElement('div');
   modal.id = 'settings-modal';
-  modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center';
+  modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center modal-enter';
   modal.innerHTML = `
     <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-md p-6 space-y-4 m-4">
       <div class="flex justify-between items-center">
         <h3 class="text-xl font-bold text-white"><i class="fa-solid fa-gear text-violet-500 mr-2"></i>Настройки</h3>
-        <button onclick="closeSettingsModal()" class="text-neutral-400 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+        <button onclick="closeSettingsModal()" class="text-neutral-400 hover:text-white transition-colors"><i class="fa-solid fa-xmark text-xl"></i></button>
       </div>
       <div class="space-y-3">
-        <button onclick="toggleTheme()" class="w-full flex items-center justify-between p-3 bg-neutral-950 border border-neutral-800 rounded-xl hover:bg-neutral-800 transition-all">
+        <button onclick="toggleTheme()" class="w-full flex items-center justify-between p-3 bg-neutral-950 border border-neutral-800 rounded-xl hover:bg-neutral-800 transition-all btn-hover">
           <span class="text-sm text-white">🌓 Сменить тему</span>
           <span id="theme-indicator" class="text-xs text-neutral-400">${document.body.classList.contains('light-theme') ? 'Светлая' : 'Тёмная'}</span>
         </button>
-        <button onclick="logoutUser()" class="w-full flex items-center justify-between p-3 bg-neutral-950 border border-neutral-800 rounded-xl hover:bg-neutral-800 transition-all">
+        <button onclick="logoutUser()" class="w-full flex items-center justify-between p-3 bg-neutral-950 border border-neutral-800 rounded-xl hover:bg-neutral-800 transition-all btn-hover">
           <span class="text-sm text-white">🚪 Выйти из аккаунта</span>
         </button>
-        <button onclick="openReportModal()" class="w-full flex items-center justify-between p-3 bg-neutral-950 border border-neutral-800 rounded-xl hover:bg-neutral-800 transition-all">
+        <button onclick="openReportModal()" class="w-full flex items-center justify-between p-3 bg-neutral-950 border border-neutral-800 rounded-xl hover:bg-neutral-800 transition-all btn-hover">
           <span class="text-sm text-white">🚨 Пожаловаться</span>
         </button>
-        <button onclick="openInfoModal()" class="w-full flex items-center justify-between p-3 bg-neutral-950 border border-neutral-800 rounded-xl hover:bg-neutral-800 transition-all">
+        <button onclick="openInfoModal()" class="w-full flex items-center justify-between p-3 bg-neutral-950 border border-neutral-800 rounded-xl hover:bg-neutral-800 transition-all btn-hover">
           <span class="text-sm text-white">ℹ️ Инфо о подписках</span>
         </button>
       </div>
@@ -830,15 +884,15 @@ window.openReportModal = function() {
   closeSettingsModal();
   const modal = document.createElement('div');
   modal.id = 'report-modal';
-  modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center';
+  modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center modal-enter';
   modal.innerHTML = `
     <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-md p-6 space-y-4 m-4">
       <h3 class="text-xl font-bold text-white"><i class="fa-solid fa-triangle-exclamation text-rose-500 mr-2"></i>Пожаловаться</h3>
       <p class="text-xs text-neutral-400">Опишите проблему, и администратор рассмотрит вашу жалобу.</p>
       <textarea id="report-text" placeholder="Опишите проблему подробно..." rows="4" class="w-full p-3 bg-neutral-950 border border-neutral-800 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-600"></textarea>
       <div class="flex justify-end gap-3">
-        <button onclick="closeReportModal()" class="px-4 py-2 text-sm text-neutral-400 hover:text-white">Отмена</button>
-        <button onclick="submitReport()" class="px-5 py-2 text-sm bg-rose-600 hover:bg-rose-500 rounded-xl font-semibold text-white">Отправить жалобу</button>
+        <button onclick="closeReportModal()" class="px-4 py-2 text-sm text-neutral-400 hover:text-white transition-colors">Отмена</button>
+        <button onclick="submitReport()" class="px-5 py-2 text-sm bg-rose-600 hover:bg-rose-500 rounded-xl font-semibold text-white transition-all btn-hover">Отправить жалобу</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
@@ -865,7 +919,7 @@ window.openInfoModal = function() {
   closeSettingsModal();
   const modal = document.createElement('div');
   modal.id = 'info-modal';
-  modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center';
+  modal.className = 'fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center modal-enter';
   modal.innerHTML = `
     <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-2xl p-6 space-y-4 m-4 max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center">
@@ -914,11 +968,13 @@ window.closeInfoModal = function() {
   if (modal) modal.remove();
 };
 
-// === РЕКЛАМНАЯ СИСТЕМА ===
+// === РЕКЛАМНАЯ СИСТЕМА (ИСПРАВЛЕННАЯ) ===
 function shouldShowAd() {
   if (!currentUser) return false;
   const limits = getSubscriptionLimits(currentUser.subscriptionPlan);
   if (limits.adEvery === Infinity) return false;
+  // Реклама показывается ТОЛЬКО после того, как трек был прослушан до конца
+  if (!trackPlayed) return false;
   currentAdCount++;
   return currentAdCount % limits.adEvery === 0;
 }
@@ -934,6 +990,7 @@ async function playAdIfNeeded() {
   mainAudio.pause();
   isPlaying = false;
   document.getElementById('play-icon-svg').className = "fa-solid fa-play text-lg text-black";
+  document.getElementById('current-track-cover')?.classList.remove('pulsing-cover');
   
   adPlayer.currentTime = 0;
   try {
@@ -948,6 +1005,8 @@ async function playAdIfNeeded() {
     });
     
     adPlayer.pause();
+    // Сбрасываем флаг после показа рекламы
+    trackPlayed = false;
     return true;
   } catch (e) {
     console.error("Ad play error:", e);
@@ -1104,9 +1163,9 @@ window.handleSearch = function(query) {
   container.innerHTML = filteredTracks.length === 0 
     ? `<div class="text-neutral-500 text-sm py-8 text-center bg-neutral-900/20 rounded-2xl border border-dashed border-neutral-800">Ничего не найдено 😭</div>`
     : filteredTracks.map((track, i) => `
-        <div class="flex items-center justify-between p-3 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer" onclick="activePlaylist = ${JSON.stringify(filteredTracks).replace(/"/g, '&quot;')}; selectTrack(${i}, true)">
+        <div class="flex items-center justify-between p-3 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer btn-hover" onclick="activePlaylist = ${JSON.stringify(filteredTracks).replace(/"/g, '&quot;')}; selectTrack(${i}, true)">
           <div class="flex items-center space-x-3 min-w-0">
-            <img src="${track.cover}" class="w-10 h-10 rounded-lg object-cover">
+            <img src="${track.cover}" class="w-10 h-10 rounded-lg object-cover cover-zoom">
             <div class="min-w-0">
               <h4 class="font-semibold text-sm truncate text-white">${track.title}</h4>
               <p class="text-xs text-neutral-400 truncate">${track.artist}</p>
@@ -1125,14 +1184,14 @@ window.handleSearch = function(query) {
   playlistContainer.innerHTML = filteredPlaylists.length === 0
     ? `<div class="text-neutral-500 text-xs py-4 text-center col-span-full">Плейлисты не найдены.</div>`
     : filteredPlaylists.map(pl => `
-        <div class="bg-neutral-900/60 border border-neutral-800 p-4 rounded-2xl cursor-pointer hover:-translate-y-1 hover:border-violet-500/30 transition-all" onclick="openPlaylistView('${pl.id}')">
-          <img src="${pl.cover}" class="w-full aspect-square object-cover rounded-xl mb-3">
+        <div class="bg-neutral-900/60 border border-neutral-800 p-4 rounded-2xl cursor-pointer hover:-translate-y-1 hover:border-violet-500/30 transition-all btn-hover" onclick="openPlaylistView('${pl.id}')">
+          <img src="${pl.cover}" class="w-full aspect-square object-cover rounded-xl mb-3 cover-zoom">
           <h4 class="font-bold text-sm truncate text-white">${pl.name}</h4>
           <span class="text-[10px] text-violet-400 uppercase tracking-widest font-semibold">${pl.isPublic ? 'Публичный' : 'Приватный'}</span>
         </div>`).join('');
 };
 
-// === ВОСПРОИЗВЕДЕНИЕ С ПРОВЕРКОЙ РЕКЛАМЫ ===
+// === ВОСПРОИЗВЕДЕНИЕ С ИСПРАВЛЕННОЙ ЛОГИКОЙ РЕКЛАМЫ ===
 window.togglePlay = async function() {
   const audio = document.getElementById('audio-player');
   const playIcon = document.getElementById('play-icon-svg');
@@ -1142,26 +1201,30 @@ window.togglePlay = async function() {
     audio.pause();
     isPlaying = false;
     playIcon.className = "fa-solid fa-play text-lg text-black";
-    cover.classList.remove('pulsing-cover');
+    cover?.classList.remove('pulsing-cover');
   } else {
+    // Проверяем рекламу ТОЛЬКО если трек уже был прослушан
     const adPlayed = await playAdIfNeeded();
     if (adPlayed) {
       audio.play().then(() => {
         isPlaying = true;
         playIcon.className = "fa-solid fa-pause text-lg text-black";
-        cover.classList.add('pulsing-cover');
+        cover?.classList.add('pulsing-cover');
       }).catch(() => window.showToast("⚠️ Нажмите воспроизведение ещё раз"));
     } else {
       audio.play().then(() => {
         isPlaying = true;
         playIcon.className = "fa-solid fa-pause text-lg text-black";
-        cover.classList.add('pulsing-cover');
+        cover?.classList.add('pulsing-cover');
       }).catch(() => window.showToast("⚠️ Нажмите воспроизведение ещё раз"));
     }
   }
 };
 
 window.nextTrack = async function() {
+  // Сбрасываем флаг "трек прослушан" при переходе к следующему
+  trackPlayed = false;
+  
   if (shouldShowAd()) {
     const adPlayed = await playAdIfNeeded();
     if (adPlayed) {
@@ -1187,7 +1250,23 @@ window.nextTrack = async function() {
   }
 };
 
-// === ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ ИЗ ОРИГИНАЛА (полные реализации) ===
+// === МОДАЛЬНОЕ ОКНО ОБЛОЖКИ ТРЕКА ===
+window.showCoverModal = function(src, title, artist) {
+  if (!src) return;
+  const modal = document.getElementById('cover-modal');
+  document.getElementById('cover-modal-img').src = src;
+  document.getElementById('cover-modal-title').innerText = title || 'Неизвестный трек';
+  document.getElementById('cover-modal-artist').innerText = artist || 'Неизвестный исполнитель';
+  modal.classList.remove('hidden');
+  setTimeout(() => modal.classList.remove('modal-exit'), 10);
+};
+window.hideCoverModal = function() {
+  const modal = document.getElementById('cover-modal');
+  modal.classList.add('modal-exit');
+  setTimeout(() => modal.classList.add('hidden'), 200);
+};
+
+// === ОСТАЛЬНЫЕ ФУНКЦИИ (полные реализации) ===
 window.selectTrack = function(index, startPlaying = true) {
   if (activePlaylist.length === 0) activePlaylist = tracks;
   if (index < 0 || index >= activePlaylist.length) return;
@@ -1214,6 +1293,10 @@ window.selectTrack = function(index, startPlaying = true) {
     document.getElementById('lyrics-container').innerHTML = '<p class="text-neutral-500 italic">Слова для этого трека отсутствуют.</p>';
   }
   updateFavoriteUI();
+  
+  // Сбрасываем флаг "трек прослушан" при выборе нового трека
+  trackPlayed = false;
+  
   if (startPlaying) {
     isPlaying = false;
     window.togglePlay();
@@ -1230,13 +1313,13 @@ window.renderAllTracks = function() {
   
   tracks.forEach((track, index) => {
     const card = document.createElement('div');
-    card.className = "bg-neutral-900/40 hover:bg-neutral-800/60 border border-neutral-800/40 hover:border-violet-500/30 p-4 rounded-2xl cursor-pointer transition-all duration-300 group hover:-translate-y-1 relative";
+    card.className = "bg-neutral-900/40 hover:bg-neutral-800/60 border border-neutral-800/40 hover:border-violet-500/30 p-4 rounded-2xl cursor-pointer transition-all duration-300 group hover:-translate-y-1 relative btn-hover";
     card.onclick = () => { activePlaylist = tracks; selectTrack(index, true); };
     card.innerHTML = `
       <div class="relative rounded-xl overflow-hidden aspect-square mb-4 bg-neutral-950">
-        <img src="${track.cover}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" alt="${track.title}">
+        <img src="${track.cover}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cover-zoom cursor-pointer" alt="${track.title}" onclick="event.stopPropagation(); showCoverModal('${track.cover}', '${track.title}', '${track.artist}')">
         <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-          <button class="w-12 h-12 bg-violet-600 hover:bg-violet-500 text-white rounded-full flex items-center justify-center shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+          <button class="w-12 h-12 bg-violet-600 hover:bg-violet-500 text-white rounded-full flex items-center justify-center shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 btn-hover">
             <i class="fa-solid fa-play"></i>
           </button>
         </div>
@@ -1249,11 +1332,11 @@ window.renderAllTracks = function() {
     
     const isFavorite = favoriteIds.includes(track.id);
     const quickRow = document.createElement('div');
-    quickRow.className = "flex items-center justify-between py-3 hover:bg-neutral-800/30 px-3 rounded-xl transition-all group";
+    quickRow.className = "flex items-center justify-between py-3 hover:bg-neutral-800/30 px-3 rounded-xl transition-all group btn-hover";
     quickRow.innerHTML = `
       <div class="flex items-center space-x-4 cursor-pointer min-w-0" onclick="activePlaylist = tracks; selectTrack(${index}, true)">
         <span class="text-xs text-neutral-500 font-bold w-4">${index + 1}</span>
-        <div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-950">
+        <div class="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-neutral-950 cover-zoom cursor-pointer" onclick="event.stopPropagation(); showCoverModal('${track.cover}', '${track.title}', '${track.artist}')">
           <img src="${track.cover}" class="w-full h-full object-cover">
         </div>
         <div class="min-w-0">
@@ -1263,7 +1346,7 @@ window.renderAllTracks = function() {
       </div>
       <div class="flex items-center space-x-3">
         <span class="text-xs text-neutral-500 hidden sm:inline">${track.duration || '03:40'}</span>
-        <button onclick="toggleFavorite('${track.id}'); event.stopPropagation();" class="text-neutral-500 hover:text-rose-500 transition-colors">
+        <button onclick="toggleFavorite('${track.id}'); event.stopPropagation();" class="text-neutral-500 hover:text-rose-500 transition-colors btn-hover">
           <i class="fa-solid fa-heart ${isFavorite ? 'text-rose-500' : 'text-neutral-500'}"></i>
         </button>
       </div>`;
@@ -1285,17 +1368,17 @@ window.renderFavoritesList = function() {
   container.innerHTML = '';
   favTracks.forEach((track, index) => {
     const el = document.createElement('div');
-    el.className = "flex items-center justify-between p-2.5 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer mb-2";
+    el.className = "flex items-center justify-between p-2.5 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer mb-2 btn-hover";
     el.onclick = () => { activePlaylist = favTracks; selectTrack(index, true); };
     el.innerHTML = `
       <div class="flex items-center space-x-3 min-w-0">
-        <img src="${track.cover}" class="w-9 h-9 rounded-lg object-cover">
+        <img src="${track.cover}" class="w-9 h-9 rounded-lg object-cover cover-zoom cursor-pointer" onclick="event.stopPropagation(); showCoverModal('${track.cover}', '${track.title}', '${track.artist}')">
         <div class="min-w-0">
           <h4 class="font-semibold text-sm truncate text-white">${track.title}</h4>
           <p class="text-xs text-neutral-400 truncate">${track.artist}</p>
         </div>
       </div>
-      <button onclick="toggleFavorite('${track.id}'); event.stopPropagation();" class="text-rose-500 hover:text-rose-400">
+      <button onclick="toggleFavorite('${track.id}'); event.stopPropagation();" class="text-rose-500 hover:text-rose-400 btn-hover">
         <i class="fa-solid fa-heart"></i>
       </button>`;
     container.appendChild(el);
@@ -1376,6 +1459,7 @@ window.updateActiveLyrics = function(currentTime) {
 };
 
 window.prevTrack = function() {
+  trackPlayed = false;
   let prev = currentTrackIndex - 1;
   if (prev < 0) prev = activePlaylist.length - 1;
   selectTrack(prev, true);
@@ -1429,7 +1513,10 @@ window.switchTab = function(tabName) {
   const tabs = ['home', 'search', 'library', 'support', 'profile', 'admin', 'playlist-view'];
   tabs.forEach(t => { const el = document.getElementById(`tab-${t}`); if (el) el.classList.add('hidden'); });
   const target = document.getElementById(`tab-${tabName}`);
-  if (target) target.classList.remove('hidden');
+  if (target) {
+    target.classList.remove('hidden');
+    target.classList.add('animate-fade-in');
+  }
   const menuBtns = ['home', 'search', 'library', 'support', 'profile', 'admin'];
   menuBtns.forEach(btn => {
     const el = document.getElementById(`nav-${btn}`);
@@ -1485,11 +1572,11 @@ window.renderProfileTracks = function() {
   }
   myTracks.forEach((track, i) => {
     const el = document.createElement('div');
-    el.className = "flex items-center justify-between p-3 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer";
+    el.className = "flex items-center justify-between p-3 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer btn-hover";
     el.onclick = () => { activePlaylist = myTracks; selectTrack(i, true); };
     el.innerHTML = `
       <div class="flex items-center space-x-3 min-w-0">
-        <img src="${track.cover}" class="w-10 h-10 rounded-lg object-cover">
+        <img src="${track.cover}" class="w-10 h-10 rounded-lg object-cover cover-zoom cursor-pointer" onclick="event.stopPropagation(); showCoverModal('${track.cover}', '${track.title}', '${track.artist}')">
         <div class="min-w-0">
           <h4 class="font-semibold text-sm truncate text-white">${track.title}</h4>
           <p class="text-xs text-neutral-400 truncate">Статус модерации: <span class="font-bold text-amber-400 text-[10px]">${track.coverStatus}</span></p>
@@ -1512,7 +1599,7 @@ window.renderPlaylists = function() {
   myPlaylists.forEach(pl => {
     const btn = document.createElement('button');
     btn.onclick = () => openPlaylistView(pl.id);
-    btn.className = "w-full text-left px-4 py-2 rounded-xl text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/30 truncate transition-all flex items-center space-x-2";
+    btn.className = "w-full text-left px-4 py-2 rounded-xl text-sm text-neutral-400 hover:text-white hover:bg-neutral-800/30 truncate transition-all flex items-center space-x-2 btn-hover";
     btn.innerHTML = `<i class="fa-solid fa-compact-disc text-violet-500"></i><span>${pl.name}</span>`;
     container.appendChild(btn);
   });
@@ -1530,64 +1617,60 @@ window.renderProfilePlaylists = function() {
   publicPlaylists.forEach(pl => {
     const card = document.createElement('div');
     card.onclick = () => openPlaylistView(pl.id);
-    card.className = "bg-neutral-900 border border-neutral-800 p-4 rounded-2xl cursor-pointer hover:-translate-y-1 transition-all";
+    card.className = "bg-neutral-900 border border-neutral-800 p-4 rounded-2xl cursor-pointer hover:-translate-y-1 transition-all btn-hover";
     card.innerHTML = `
-      <img src="${pl.cover}" class="w-full aspect-square object-cover rounded-xl mb-3">
+      <img src="${pl.cover}" class="w-full aspect-square object-cover rounded-xl mb-3 cover-zoom">
       <h4 class="font-bold text-sm truncate text-white">${pl.name}</h4>
       <span class="text-[10px] text-neutral-400 font-semibold uppercase tracking-widest">Публичный</span>`;
     container.appendChild(card);
   });
 };
 
-window.openCreatePlaylistModal = function() {
-  document.getElementById('playlist-modal').classList.remove('hidden');
-  setTimeout(() => document.getElementById('playlist-modal').classList.add('opacity-100'), 10);
+// === ПОТОК ПОДПИСКИ (ИСПРАВЛЕННЫЙ) ===
+window.openSubscriptionModal = function() {
+  selectedPlan = null;
+  selectedPeriod = null;
+  document.getElementById('payment-block')?.classList.add('hidden');
+  document.getElementById('subscription-modal')?.classList.remove('hidden');
 };
-window.closeCreatePlaylistModal = function() {
-  document.getElementById('playlist-modal').classList.remove('opacity-100');
-  setTimeout(() => document.getElementById('playlist-modal').classList.add('hidden'), 300);
+window.closeSubscriptionModal = function() {
+  document.getElementById('subscription-modal')?.classList.add('hidden');
 };
-window.saveNewPlaylist = async function() {
-  const name = document.getElementById('playlist-name-input').value.trim();
-  const desc = document.getElementById('playlist-desc-input').value.trim() || "Музыкальная коллекция.";
-  const cover = document.getElementById('playlist-cover-input').value.trim() || "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=300&auto=format&fit=crop";
-  const privacy = document.getElementById('playlist-privacy').value;
-  if (!name) { window.showToast("⚠️ Укажите название плейлиста"); return; }
-  const plId = "playlist_" + Date.now();
-  const newPl = { id: plId, name: name, description: desc, cover: cover, isPublic: privacy === 'public', createdBy: currentUser.uid, trackIds: [] };
-  if (db) await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists', plId), newPl);
-  closeCreatePlaylistModal();
-  window.showToast(`🎉 Создан плейлист "${name}"`);
-  document.getElementById('playlist-name-input').value = '';
-  document.getElementById('playlist-desc-input').value = '';
-};
-
-window.openSubscriptionModal = function() { document.getElementById('subscription-modal').classList.remove('hidden'); };
-window.closeSubscriptionModal = function() { document.getElementById('subscription-modal').classList.add('hidden'); };
 window.selectSubscriptionPlan = function(plan) {
-  currentUploadPlan = plan;
+  selectedPlan = plan;
   document.getElementById('payment-selected-plan').innerText = plan;
-  document.getElementById('payment-block').classList.remove('hidden');
+  document.getElementById('payment-block')?.classList.remove('hidden');
   window.selectPeriod(1);
 };
 window.selectPeriod = function(months) {
-  currentUploadPeriod = months;
-  const rates = currentUploadPlan === "ISP+" ? {1: 250, 3: 450, 6: 800} : {1: 500, 3: 980, 6: 1500};
+  selectedPeriod = months;
+  const rates = selectedPlan === "ISP+" ? {1: 250, 3: 450, 6: 800} : {1: 500, 3: 980, 6: 1500};
   const price = rates[months];
   document.getElementById('payment-total-price').innerText = `${price} рублей`;
-  document.getElementById('period-1m-btn').className = months === 1 ? "p-3 bg-violet-600 border border-violet-500 rounded-xl text-xs font-bold text-center text-white" : "p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-bold text-center";
-  document.getElementById('period-3m-btn').className = months === 3 ? "p-3 bg-violet-600 border border-violet-500 rounded-xl text-xs font-bold text-center text-white" : "p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-bold text-center";
-  document.getElementById('period-6m-btn').className = months === 6 ? "p-3 bg-violet-600 border border-violet-500 rounded-xl text-xs font-bold text-center text-white" : "p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-bold text-center";
+  document.getElementById('period-1m-btn').className = months === 1 ? "p-3 bg-violet-600 border border-violet-500 rounded-xl text-xs font-bold text-center text-white" : "p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-bold text-center btn-hover";
+  document.getElementById('period-3m-btn').className = months === 3 ? "p-3 bg-violet-600 border border-violet-500 rounded-xl text-xs font-bold text-center text-white" : "p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-bold text-center btn-hover";
+  document.getElementById('period-6m-btn').className = months === 6 ? "p-3 bg-violet-600 border border-violet-500 rounded-xl text-xs font-bold text-center text-white" : "p-3 bg-neutral-900 border border-neutral-800 rounded-xl text-xs font-bold text-center btn-hover";
 };
-window.payWithCard = function() { window.showToast("❌ Данный метод оплаты временно недоступен"); };
-window.triggerPromoCode = function() { document.getElementById('promo-modal').classList.remove('hidden'); };
-window.closePromoModal = function() { document.getElementById('promo-modal').classList.add('hidden'); };
+window.payWithCard = function() {
+  window.showToast("❌ Данный метод оплаты временно недоступен");
+};
+window.triggerPromoCode = function() {
+  document.getElementById('subscription-modal')?.classList.add('hidden');
+  document.getElementById('promo-modal')?.classList.remove('hidden');
+};
+window.closePromoModal = function() {
+  document.getElementById('promo-modal')?.classList.add('hidden');
+  document.getElementById('subscription-modal')?.classList.remove('hidden');
+};
 window.submitPromoCode = async function() {
   const code = document.getElementById('promo-input-code').value.trim();
   if (!code || !db) return;
   const promoDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'promoCodes', code);
   const promoDoc = await getDoc(promoDocRef);
-  if (!promoDoc.exists() || promoDoc.data().status !== 'active') { window.showToast("⚠️ Промокод недействителен или уже активирован!"); return; }
+  if (!promoDoc.exists() || promoDoc.data().status !== 'active') {
+    window.showToast("⚠️ Промокод недействителен или уже активирован!");
+    return;
+  }
   const promoData = promoDoc.data();
   const expirationDate = new Date();
   expirationDate.setMonth(expirationDate.getMonth() + promoData.periodMonths);
@@ -1598,10 +1681,18 @@ window.submitPromoCode = async function() {
   await updateDoc(promoDocRef, { status: "used" });
   updateProfileUI();
   closePromoModal();
-  closeSubscriptionModal();
-  window.showToast(`🎉 Вам выдана подписка ${promoData.plan} до ${currentUser.subscriptionExpiresAt}!`);
+  
+  // Показываем результат
+  document.getElementById('promo-result-plan').innerText = promoData.plan;
+  document.getElementById('promo-result-period').innerText = promoData.periodMonths + " месяц" + (promoData.periodMonths > 1 ? 'а' : '');
+  document.getElementById('promo-result-modal')?.classList.remove('hidden');
+};
+window.closePromoResultModal = function() {
+  document.getElementById('promo-result-modal')?.classList.add('hidden');
+  window.showToast("🎉 Подписка активирована!");
 };
 
+// === ОСТАЛЬНЫЕ ФУНКЦИИ (полные) ===
 window.listenToDatabaseUpdates = function() {
   if (!db) return;
   onSnapshot(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'tracks'), (snapshot) => {
@@ -1613,13 +1704,13 @@ window.listenToDatabaseUpdates = function() {
     renderFavoritesList();
     updateAdminModerationQueue();
     updateLyricsTrackSelector();
-  }, (error) => console.error("Tracks listener error:", error));
+  });
   onSnapshot(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'playlists'), (snapshot) => {
     playlists = [];
     snapshot.forEach(doc => playlists.push(doc.data()));
     renderPlaylists();
     renderProfilePlaylists();
-  }, (error) => console.error("Playlists listener error:", error));
+  });
   if (currentUser.email === 'sobakastalina123@gmail.com') {
     onSnapshot(collection(db, 'artifacts', defaultAppId, 'public', 'data', 'users'), () => updateAdminModerationQueue());
   }
@@ -1629,7 +1720,7 @@ window.listenToDatabaseUpdates = function() {
     messages.sort((a,b) => a.timestamp - b.timestamp);
     renderSupportMessages();
     renderAdminSupportMessages();
-  }, (error) => console.error("Chat listener error:", error));
+  });
 };
 
 window.updateAdminModerationQueue = async function() {
@@ -1648,8 +1739,8 @@ window.updateAdminModerationQueue = async function() {
           <div><span class="font-bold text-white block">${u.name}</span><span class="text-neutral-500">Запрос на смену аватара</span></div>
         </div>
         <div class="flex gap-2">
-          <button onclick="approveAvatar('${u.uid}')" class="px-3 py-1 bg-green-600 hover:bg-green-500 font-bold rounded-lg text-white">Одобрить</button>
-          <button onclick="rejectAvatar('${u.uid}')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 font-bold rounded-lg text-white">Отклонить</button>
+          <button onclick="approveAvatar('${u.uid}')" class="px-3 py-1 bg-green-600 hover:bg-green-500 font-bold rounded-lg text-white btn-hover">Одобрить</button>
+          <button onclick="rejectAvatar('${u.uid}')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 font-bold rounded-lg text-white btn-hover">Отклонить</button>
         </div>`;
       container.appendChild(el);
     }
@@ -1664,8 +1755,8 @@ window.updateAdminModerationQueue = async function() {
           <div><span class="font-bold text-white block">${track.title}</span><span class="text-neutral-500">Запрос на обложку трека</span></div>
         </div>
         <div class="flex gap-2">
-          <button onclick="approveTrackCover('${track.id}')" class="px-3 py-1 bg-green-600 hover:bg-green-500 font-bold rounded-lg text-white">Одобрить</button>
-          <button onclick="rejectTrackCover('${track.id}')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 font-bold rounded-lg text-white">Отклонить</button>
+          <button onclick="approveTrackCover('${track.id}')" class="px-3 py-1 bg-green-600 hover:bg-green-500 font-bold rounded-lg text-white btn-hover">Одобрить</button>
+          <button onclick="rejectTrackCover('${track.id}')" class="px-3 py-1 bg-rose-600 hover:bg-rose-500 font-bold rounded-lg text-white btn-hover">Отклонить</button>
         </div>`;
       container.appendChild(el);
     }
@@ -1718,18 +1809,18 @@ window.openPlaylistView = function(playlistId) {
   } else {
     plTracks.forEach((track, i) => {
       const el = document.createElement('div');
-      el.className = "flex items-center justify-between p-3 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer";
+      el.className = "flex items-center justify-between p-3 bg-neutral-900/40 rounded-xl hover:bg-neutral-800/50 transition-all cursor-pointer btn-hover";
       el.onclick = () => { activePlaylist = plTracks; selectTrack(i, true); };
       el.innerHTML = `
         <div class="flex items-center space-x-3 min-w-0">
           <span class="text-xs text-neutral-500 font-bold w-4">${i+1}</span>
-          <img src="${track.cover}" class="w-10 h-10 rounded-lg object-cover">
+          <img src="${track.cover}" class="w-10 h-10 rounded-lg object-cover cover-zoom cursor-pointer" onclick="event.stopPropagation(); showCoverModal('${track.cover}', '${track.title}', '${track.artist}')">
           <div class="min-w-0">
             <h4 class="font-semibold text-sm truncate text-white">${track.title}</h4>
             <p class="text-xs text-neutral-400 truncate">${track.artist}</p>
           </div>
         </div>
-        <button onclick="removeTrackFromPlaylist('${pl.id}', '${track.id}'); event.stopPropagation();" class="text-neutral-500 hover:text-rose-500 transition-colors">
+        <button onclick="removeTrackFromPlaylist('${pl.id}', '${track.id}'); event.stopPropagation();" class="text-neutral-500 hover:text-rose-500 transition-colors btn-hover">
           <i class="fa-solid fa-trash"></i>
         </button>`;
       listContainer.appendChild(el);
@@ -1810,7 +1901,7 @@ window.renderSupportMessages = function() {
   relevantMessages.forEach(m => {
     const isMyMessage = m.userId === currentUser.uid;
     const bubble = document.createElement('div');
-    bubble.className = `flex flex-col max-w-[75%] p-3 rounded-2xl space-y-1 ${isMyMessage ? 'bg-violet-600 self-end text-white' : 'bg-neutral-800 self-start text-neutral-200'}`;
+    bubble.className = `flex flex-col max-w-[75%] p-3 rounded-2xl space-y-1 ${isMyMessage ? 'bg-violet-600 self-end text-white' : 'bg-neutral-800 self-start text-neutral-200'} animate-slide-in`;
     let imageHtml = '';
     if (m.image) imageHtml = `<img src="${m.image}" class="rounded-xl max-w-full max-h-48 object-cover mb-2">`;
     bubble.innerHTML = `${imageHtml}<p class="text-sm break-words">${m.text}</p><span class="text-[9px] text-neutral-300 self-end">${m.timeString}</span>`;
@@ -1825,7 +1916,7 @@ window.renderAdminSupportMessages = function() {
   container.innerHTML = '';
   messages.forEach(m => {
     const el = document.createElement('div');
-    el.className = "p-3 bg-neutral-900 border border-neutral-800 rounded-xl space-y-2 text-xs";
+    el.className = "p-3 bg-neutral-900 border border-neutral-800 rounded-xl space-y-2 text-xs animate-slide-in";
     let imageHtml = '';
     if (m.image) imageHtml = `<img src="${m.image}" class="rounded-lg max-h-24 object-cover">`;
     el.innerHTML = `
@@ -1852,7 +1943,12 @@ window.sendAdminReply = async function() {
   const text = document.getElementById('admin-reply-input').value.trim();
   if (!text) return;
   const msgId = "msg_" + Date.now();
-  const newMsg = { id: msgId, userId: currentUser.uid, userName: "Служба поддержки", userUsername: "support", text: text, image: null, timestamp: Date.now(), timeString: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}), dateString: new Date().toLocaleDateString('ru-RU') };
+  const newMsg = {
+    id: msgId, userId: currentUser.uid, userName: "Служба поддержки", userUsername: "support",
+    text: text, image: null, timestamp: Date.now(),
+    timeString: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}),
+    dateString: new Date().toLocaleDateString('ru-RU')
+  };
   if (db) await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'chat', msgId), newMsg);
   document.getElementById('admin-reply-input').value = '';
   window.showToast("📨 Ответ админа отправлен!");
@@ -1914,7 +2010,14 @@ window.handleAuthSubmit = async function(event) {
       const credentials = await createUserWithEmailAndPassword(auth, email, password);
       await sendEmailVerification(credentials.user);
       const userDocRef = doc(db, 'artifacts', defaultAppId, 'public', 'data', 'users', credentials.user.uid);
-      await setDoc(userDocRef, { uid: credentials.user.uid, name: name, username: username.toLowerCase(), email: email, avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop", avatarStatus: "approved", joinedAt: new Date().toLocaleDateString('ru-RU'), subscriptionPlan: "Free", subscriptionExpiresAt: null, tracksUploadedCount: 0, limitResetTime: getNextMskReset(), usernameChangedAt: 0, lastImportAt: 0 });
+      await setDoc(userDocRef, {
+        uid: credentials.user.uid, name: name, username: username.toLowerCase(), email: email,
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=200&auto=format&fit=crop",
+        avatarStatus: "approved", joinedAt: new Date().toLocaleDateString('ru-RU'),
+        subscriptionPlan: "Free", subscriptionExpiresAt: null,
+        tracksUploadedCount: 0, limitResetTime: getNextMskReset(),
+        usernameChangedAt: 0, lastImportAt: 0
+      });
       document.getElementById('auth-modal').classList.add('hidden');
       document.getElementById('verify-modal').classList.remove('hidden');
       window.showToast("📧 Письмо для подтверждения отправлено!");
@@ -2010,7 +2113,12 @@ window.sendSupportMessage = async function() {
   const text = document.getElementById('support-msg-input').value.trim();
   if (!text && !currentSupportImageBase64) return;
   const msgId = "msg_" + Date.now();
-  const newMsg = { id: msgId, userId: currentUser.uid, userName: currentUser.name, userUsername: currentUser.username, text: text, image: currentSupportImageBase64 || null, timestamp: Date.now(), timeString: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}), dateString: new Date().toLocaleDateString('ru-RU') };
+  const newMsg = {
+    id: msgId, userId: currentUser.uid, userName: currentUser.name, userUsername: currentUser.username,
+    text: text, image: currentSupportImageBase64 || null, timestamp: Date.now(),
+    timeString: new Date().toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'}),
+    dateString: new Date().toLocaleDateString('ru-RU')
+  };
   if (db) await setDoc(doc(db, 'artifacts', defaultAppId, 'public', 'data', 'chat', msgId), newMsg);
   document.getElementById('support-msg-input').value = '';
   currentSupportImageBase64 = null;
@@ -2022,8 +2130,8 @@ window.initVisualizerFallback = function() {
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   let wavePhase = 0;
-  function drawFallback() {
-    requestAnimationFrame(drawFallback);
+  function draw() {
+    requestAnimationFrame(draw);
     const width = canvas.width = canvas.offsetWidth, height = canvas.height = canvas.offsetHeight;
     ctx.clearRect(0, 0, width, height);
     const barCount = 20;
@@ -2035,14 +2143,14 @@ window.initVisualizerFallback = function() {
       ctx.fillRect(i * (width/barCount), height - barHeight, width/barCount - 4, barHeight);
     }
   }
-  drawFallback();
+  draw();
 };
 
 window.showToast = function(message) {
   const container = document.getElementById('toast-container');
   if (!container) return;
   const toast = document.createElement('div');
-  toast.className = "bg-neutral-900/90 text-neutral-100 border border-violet-500/30 px-4 py-3 rounded-2xl shadow-xl flex items-center space-x-2 backdrop-blur transform translate-y-4 opacity-0 transition-all duration-300 pointer-events-auto text-sm";
+  toast.className = "bg-neutral-900/90 text-neutral-100 border border-violet-500/30 px-4 py-3 rounded-2xl shadow-xl flex items-center space-x-2 backdrop-blur transform translate-y-4 opacity-0 transition-all duration-300 pointer-events-auto text-sm toast-enter";
   toast.innerHTML = `<span class="w-2 h-2 bg-violet-500 rounded-full animate-ping"></span><span>${message}</span>`;
   container.appendChild(toast);
   setTimeout(() => toast.classList.remove('translate-y-4', 'opacity-0'), 10);
@@ -2060,6 +2168,19 @@ const staticTracks = [
 async function loadStaticTracks() { tracks = [...staticTracks]; }
 
 let activeLyricsList = [], tempLyrics = [], currentSupportImageBase64 = null, activePlaylistViewId = null, isRegisterMode = false;
+
+// Событие окончания трека — устанавливаем флаг "трек прослушан"
+const audioPlayer = document.getElementById('audio-player');
+audioPlayer.addEventListener('ended', () => {
+  trackPlayed = true; // Теперь можно показывать рекламу при следующем треке
+  if (repeatMode) {
+    audioPlayer.currentTime = 0;
+    audioPlayer.play();
+    trackPlayed = false; // При повторе сбрасываем
+  } else {
+    window.nextTrack();
+  }
+});
 
 </script>
 </body>
