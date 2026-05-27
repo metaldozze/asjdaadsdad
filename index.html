@@ -99,57 +99,56 @@
 
             <!-- Шаги регистрации -->
             <div id="register-container" class="hidden space-y-4">
-                <!-- Шаг 1: Почта -->
+                <!-- Шаг 1: Ввод почты и пароля для первичного создания аккаунта -->
                 <div id="reg-step-1" class="space-y-4">
                     <div class="space-y-1">
                         <label class="text-xs text-zinc-400 font-medium">Электронная почта для регистрации</label>
                         <input type="email" id="reg-email" class="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-brand-500 focus:outline-none text-sm text-white" placeholder="your@email.com">
                     </div>
+                    <div class="space-y-1">
+                        <label class="text-xs text-zinc-400 font-medium">Придумайте пароль</label>
+                        <input type="password" id="reg-initial-password" class="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-brand-500 focus:outline-none text-sm text-white" placeholder="••••••••">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs text-zinc-400 font-medium">Повторите пароль</label>
+                        <input type="password" id="reg-initial-password-confirm" class="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-brand-500 focus:outline-none text-sm text-white" placeholder="••••••••">
+                    </div>
                     <button onclick="registerStepOne()" class="w-full py-3 bg-brand-500 hover:bg-brand-600 transition text-white font-semibold rounded-xl">
-                        Отправить письмо-подтверждение
+                        Создать аккаунт и отправить письмо
                     </button>
                 </div>
 
-                <!-- Шаг 2: Проверка почты -->
+                <!-- Шаг 2: Реальная проверка подтверждения почты Firebase -->
                 <div id="reg-step-2" class="hidden space-y-4 text-center">
                     <div class="p-4 bg-brand-500/10 border border-brand-500/20 rounded-xl space-y-2">
-                        <p class="text-sm text-brand-500 font-medium">Письмо отправлено!</p>
-                        <p class="text-xs text-zinc-400">Мы симулируем отправку ссылки подтверждения Firebase. Пожалуйста, подтвердите её для продолжения.</p>
+                        <p class="text-sm text-brand-500 font-bold">Письмо отправлено!</p>
+                        <p class="text-xs text-zinc-400">Мы отправили реальное письмо со ссылкой для подтверждения от Firebase на вашу почту. Проверьте ваш почтовый ящик (включая папку Спам).</p>
                     </div>
-                    <button onclick="simulateFirebaseVerification()" class="w-full py-3 bg-zinc-800 hover:bg-zinc-700 transition text-white font-semibold rounded-xl flex items-center justify-center gap-2">
-                        <span class="w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping"></span>
-                        Имитировать переход по ссылке Firebase
+                    
+                    <button onclick="checkFirebaseVerification()" class="w-full py-3 bg-brand-500 hover:bg-brand-600 transition text-white font-semibold rounded-xl flex items-center justify-center gap-2">
+                        <i data-lucide="refresh-cw" class="w-4 h-4 animate-spin"></i>
+                        Я подтвердил почту (Проверить статус)
+                    </button>
+
+                    <button onclick="resendFirebaseVerification()" class="text-xs text-zinc-400 hover:text-white transition underline">
+                        Отправить письмо повторно
                     </button>
                 </div>
 
-                <!-- Шаг 3: Никнейм -->
+                <!-- Шаг 3: Ввод никнейма -->
                 <div id="reg-step-3" class="hidden space-y-4">
                     <div class="space-y-1">
-                        <label class="text-xs text-zinc-400 font-medium">Придумайте никнейм</label>
+                        <label class="text-xs text-zinc-400 font-medium">Выберите ваш никнейм на платформе</label>
                         <input type="text" id="reg-username" class="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-brand-500 focus:outline-none text-sm text-white" placeholder="relook_user">
+                        <p class="text-[10px] text-zinc-500">Минимум 3 символа, только латинские буквы, цифры или нижнее подчеркивание.</p>
                     </div>
                     <button onclick="registerStepThree()" class="w-full py-3 bg-brand-500 hover:bg-brand-600 transition text-white font-semibold rounded-xl">
                         Далее
                     </button>
                 </div>
 
-                <!-- Шаг 4: Пароль -->
+                <!-- Шаг 4: Правила площадки -->
                 <div id="reg-step-4" class="hidden space-y-4">
-                    <div class="space-y-1">
-                        <label class="text-xs text-zinc-400 font-medium font-semibold text-zinc-300">Придумайте пароль</label>
-                        <input type="password" id="reg-password" class="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-brand-500 focus:outline-none text-sm text-white" placeholder="••••••••">
-                    </div>
-                    <div class="space-y-1">
-                        <label class="text-xs text-zinc-400 font-medium font-semibold text-zinc-300">Повторите пароль</label>
-                        <input type="password" id="reg-password-confirm" class="w-full px-4 py-3 rounded-xl bg-zinc-950 border border-zinc-800 focus:border-brand-500 focus:outline-none text-sm text-white" placeholder="••••••••">
-                    </div>
-                    <button onclick="registerStepFour()" class="w-full py-3 bg-brand-500 hover:bg-brand-600 transition text-white font-semibold rounded-xl">
-                        Ознакомиться с правилами площадки
-                    </button>
-                </div>
-
-                <!-- Шаг 5: Правила площадки -->
-                <div id="reg-step-5" class="hidden space-y-4">
                     <h3 class="text-sm font-bold text-zinc-300 text-center">Правила и условия пользования</h3>
                     <div class="bg-zinc-950 p-4 border border-zinc-800 rounded-xl max-h-60 overflow-y-auto text-xs text-zinc-400 space-y-4 leading-relaxed" id="rules-scroll-box">
                         <!-- Правила будут инжектироваться скриптом -->
@@ -160,7 +159,7 @@
                             Я согласен с правилами и буду выполнять их, в случае нарушения мой аккаунт будет либо ограничен либо заблокирован.
                         </label>
                     </div>
-                    <button onclick="registerStepFive()" class="w-full py-3 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition text-white font-semibold rounded-xl">
+                    <button onclick="registerStepFourFinalize()" class="w-full py-3 bg-brand-500 hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed transition text-white font-semibold rounded-xl">
                         Завершить регистрацию
                     </button>
                 </div>
@@ -1004,7 +1003,12 @@
         // Внутреннее состояние
         let currentUser = null;
         let currentUserDoc = null;
-        let isFirebaseSimulatedVerified = false;
+        
+        // Временные переменные для хранения введенных данных во время многошаговой регистрации
+        let registerEmail = "";
+        let registerPassword = "";
+        let registerUsername = "";
+
         let activeChatId = null;
         let activeListingIdForEdit = null;
         let chatUpdateListener = null;
@@ -1019,7 +1023,17 @@
             // Отслеживание авторизации (RULE 3)
             auth.onAuthStateChanged(async (user) => {
                 if (user) {
+                    // Обрати внимание: если пользователь вошел в систему, но еще не подтвердил почту 
+                    // и находится в процессе регистрации, мы не пускаем его на главный экран.
+                    if (!user.emailVerified && registerEmail !== "") {
+                        currentUser = user;
+                        // Пользователь находится в процессе регистрации и ждет верификации
+                        return;
+                    }
+
+                    // Если почта подтверждена или это обычный вход уже существующего юзера
                     currentUser = user;
+                    
                     // Тянем док пользователя из БД (коллекция пользователей по правилу 1)
                     await fetchUserDocument(user.uid);
                     
@@ -1075,11 +1089,11 @@
                 // Синхронизация статуса сети
                 await userRef.update({ lastActive: Date.now(), isOnline: true });
             } else {
-                // Если зашли а дока нет (например через стороннюю регистрацию)
+                // Если зашли а дока нет (завершаем регистрацию в Firestore)
                 currentUserDoc = {
                     uid: uid,
                     email: auth.currentUser.email,
-                    username: 'User_' + uid.substring(0, 5),
+                    username: registerUsername || 'User_' + uid.substring(0, 5),
                     subscription: 'free',
                     subscriptionEnd: 0,
                     regDate: Date.now(),
@@ -1087,7 +1101,8 @@
                     reviewsCount: 0,
                     isBanned: false,
                     isRestricted: false,
-                    warning: ''
+                    warning: '',
+                    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'
                 };
                 await userRef.set(currentUserDoc);
             }
@@ -1168,79 +1183,124 @@
 
         // Шаги регистрации
         function switchRegisterStep(step) {
-            for (let i = 1; i <= 5; i++) {
+            for (let i = 1; i <= 4; i++) {
                 document.getElementById(`reg-step-${i}`).classList.add('hidden');
             }
             document.getElementById(`reg-step-${step}`).classList.remove('hidden');
         }
 
-        // Шаг 1: Проверка и отправка симуляции
+        // НАЧАЛО РЕГИСТРАЦИИ — Шаг 1: Создание аккаунта и отправка реального письма Firebase
         async function registerStepOne() {
-            const email = document.getElementById('reg-email').value;
+            const email = document.getElementById('reg-email').value.trim();
+            const password = document.getElementById('reg-initial-password').value;
+            const confirmPassword = document.getElementById('reg-initial-password-confirm').value;
+
             if (!email || !email.includes('@')) {
                 showToast('Ошибка', 'Введите корректный email адрес', 'error');
                 return;
             }
-            // Шаг отправки симуляционного подтверждения
-            switchRegisterStep(2);
-        }
-
-        // Симуляция перехода Firebase ссылки
-        function simulateFirebaseVerification() {
-            isFirebaseSimulatedVerified = true;
-            showToast('Подтверждено', 'Вы успешно перешли по ссылке Firebase и подтвердили почту!', 'success');
-            // Переход на следующий шаг
-            switchRegisterStep(3);
-        }
-
-        function registerStepThree() {
-            if (!isFirebaseSimulatedVerified) {
-                showToast('Ошибка', 'Сначала нужно подтвердить почту через ссылку!', 'error');
-                return;
-            }
-            const name = document.getElementById('reg-username').value.trim();
-            if (name.length < 3) {
-                showToast('Ошибка', 'Никнейм должен быть не короче 3 символов', 'error');
-                return;
-            }
-            switchRegisterStep(4);
-        }
-
-        function registerStepFour() {
-            const p1 = document.getElementById('reg-password').value;
-            const p2 = document.getElementById('reg-password-confirm').value;
-            if (p1.length < 6) {
+            if (password.length < 6) {
                 showToast('Ошибка', 'Пароль должен быть от 6 символов', 'error');
                 return;
             }
-            if (p1 !== p2) {
+            if (password !== confirmPassword) {
                 showToast('Ошибка', 'Пароли не совпадают', 'error');
                 return;
             }
-            switchRegisterStep(5);
+
+            try {
+                // Сохраняем в памяти
+                registerEmail = email;
+                registerPassword = password;
+
+                // Создаем пользователя в Firebase Auth
+                const cred = await auth.createUserWithEmailAndPassword(email, password);
+                
+                // Сразу отправляем реальное письмо верификации
+                await cred.user.sendEmailVerification();
+                showToast('Успех', 'Аккаунт создан. Письмо с подтверждением отправлено на вашу почту!', 'success');
+
+                // Переводим на Шаг 2 (Ожидание подтверждения)
+                switchRegisterStep(2);
+            } catch (err) {
+                showToast('Ошибка регистрации', err.message, 'error');
+            }
         }
 
-        // Финальный шаг регистрации
-        async function registerStepFive() {
-            const check = document.getElementById('reg-rules-check').checked;
-            if (!check) {
-                showToast('Ошибка', 'Вы должны принять правила платформы Relook', 'error');
+        // ПРОВЕРКА СТАТУСА ВЕРИФИКАЦИИ — Шаг 2
+        async function checkFirebaseVerification() {
+            const user = auth.currentUser;
+            if (!user) {
+                showToast('Ошибка', 'Пользователь не найден. Перезагрузите страницу.', 'error');
                 return;
             }
 
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
-            const username = document.getElementById('reg-username').value.trim();
+            try {
+                // Перезагружаем профиль пользователя, чтобы получить актуальный статус emailVerified
+                await user.reload();
+                const refreshedUser = auth.currentUser;
+
+                if (refreshedUser.emailVerified) {
+                    showToast('Успешно', 'Электронная почта успешно подтверждена!', 'success');
+                    // Переходим к выбору никнейма (Шаг 3)
+                    switchRegisterStep(3);
+                } else {
+                    showToast('Почта не подтверждена', 'Мы проверили статус: почта всё ещё не верифицирована. Пожалуйста, перейдите по ссылке в письме.', 'error');
+                }
+            } catch (err) {
+                showToast('Ошибка проверки', err.message, 'error');
+            }
+        }
+
+        // Повторная отправка письма подтверждения
+        async function resendFirebaseVerification() {
+            const user = auth.currentUser;
+            if (!user) return;
+            try {
+                await user.sendEmailVerification();
+                showToast('Письмо отправлено', 'Мы повторно отправили ссылку верификации.', 'success');
+            } catch (err) {
+                showToast('Ошибка отправки', err.message, 'error');
+            }
+        }
+
+        // Ввод никнейма — Шаг 3
+        function registerStepThree() {
+            const name = document.getElementById('reg-username').value.trim();
+            
+            // Валидация никнейма
+            const usernameRegex = /^[a-zA-Z0-9_]+$/;
+            if (name.length < 3) {
+                showToast('Ошибка', 'Никнейм должен быть не менее 3 символов', 'error');
+                return;
+            }
+            if (!usernameRegex.test(name)) {
+                showToast('Ошибка', 'Никнейм может содержать только английские буквы, цифры и символ подчеркивания', 'error');
+                return;
+            }
+
+            registerUsername = name;
+            // Переходим к прочтению правил (Шаг 4)
+            switchRegisterStep(4);
+        }
+
+        // Финализация регистрации после согласия с правилами — Шаг 4
+        async function registerStepFourFinalize() {
+            const check = document.getElementById('reg-rules-check').checked;
+            if (!check) {
+                showToast('Ошибка', 'Вы должны согласиться с правилами нашей площадки для завершения регистрации.', 'error');
+                return;
+            }
+
+            const user = auth.currentUser;
+            if (!user) return;
 
             try {
-                // Регистрируем в Firebase
-                const cred = await auth.createUserWithEmailAndPassword(email, password);
-                
-                // Создаем профиль в БД
-                const newUser = {
-                    uid: cred.user.uid,
-                    email: email,
-                    username: username,
+                // Создаем полноценный документ пользователя в Firestore (RULE 1)
+                const newUserDoc = {
+                    uid: user.uid,
+                    email: user.email,
+                    username: registerUsername,
                     subscription: 'free',
                     subscriptionEnd: 0,
                     regDate: Date.now(),
@@ -1251,21 +1311,44 @@
                     warning: '',
                     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'
                 };
+
+                await db.doc(`${publicDataPath}/users/${user.uid}`).set(newUserDoc);
                 
-                await db.doc(`${publicDataPath}/users/${cred.user.uid}`).set(newUser);
-                showToast('Регистрация', 'Добро пожаловать в Relook!', 'success');
+                // Перезагружаем документ в локальную переменную и заходим на площадку
+                await fetchUserDocument(user.uid);
+
+                showToast('Добро пожаловать!', 'Регистрация полностью завершена. Рады видеть вас в Relook!', 'success');
+                
+                // Показываем интерфейс приложения
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('app-screen').classList.remove('hidden');
+                lucide.createIcons();
+                setupGlobalListeners();
             } catch (err) {
-                showToast('Ошибка регистрации', err.message, 'error');
+                showToast('Ошибка создания профиля', err.message, 'error');
             }
         }
 
         // Обычный вход по почте
         async function handleEmailLogin(e) {
             e.preventDefault();
-            const email = document.getElementById('login-email').value;
+            const email = document.getElementById('login-email').value.trim();
             const pass = document.getElementById('login-password').value;
             try {
-                await auth.signInWithEmailAndPassword(email, pass);
+                const cred = await auth.signInWithEmailAndPassword(email, pass);
+                
+                // Проверяем подтверждение почты при входе
+                if (!cred.user.emailVerified) {
+                    showToast('Почта не подтверждена', 'Вам необходимо верифицировать ваш email для доступа к платформе. Мы отправили письмо подтверждения повторно.', 'error');
+                    await cred.user.sendEmailVerification();
+                    
+                    // Переключаем форму на Шаг 2
+                    registerEmail = email;
+                    switchAuthTab('register');
+                    switchRegisterStep(2);
+                    return;
+                }
+
                 showToast('Вход', 'Вы успешно авторизованы', 'success');
             } catch (err) {
                 showToast('Ошибка входа', err.message, 'error');
