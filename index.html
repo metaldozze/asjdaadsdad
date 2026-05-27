@@ -50,6 +50,10 @@
         }
     </script>
     <style>
+        :root {
+            --brand-color: #047857;
+            --brand-color-hover: #065f46;
+        }
         body {
             font-family: 'Inter', sans-serif;
             transition: background-color 0.3s ease, color 0.3s ease;
@@ -63,13 +67,25 @@
             background: transparent;
         }
         ::-webkit-scrollbar-thumb {
-            background: #047857;
+            background: var(--brand-color);
             border-radius: 10px;
         }
         .premium-shimmer {
             background: linear-gradient(270deg, #3b82f6, #8b5cf6, #ec4899, #10b981);
             background-size: 800% 800%;
             animation: gradient-x 6s ease infinite;
+        }
+        .btn-brand-theme {
+            background-color: var(--brand-color);
+        }
+        .btn-brand-theme:hover {
+            background-color: var(--brand-color-hover);
+        }
+        .text-brand-theme {
+            color: var(--brand-color);
+        }
+        .border-brand-theme {
+            border-color: var(--brand-color);
         }
     </style>
 </head>
@@ -117,9 +133,13 @@
         const db = getFirestore(app);
         const auth = getAuth(app);
 
-        // Передача объектов в глобальную область видимости
+        // Передача объектов и функций в глобальную область видимости (исправление ошибки)
         window.db = db;
         window.auth = auth;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+        window.sendEmailVerification = sendEmailVerification;
+        window.signOut = signOut;
         window.appId = typeof __app_id !== 'undefined' ? __app_id : 'relook-global';
     </script>
 
@@ -136,7 +156,8 @@
             selectedUser: null,
             theme: localStorage.getItem('relook-theme') || 'dark', // light / dark
             brandColor: localStorage.getItem('relook-brand') || 'green', // green / blue / red
-            activeChatNotification: {} // ID чатов, у которых отключены уведомления
+            activeChatNotification: {}, // ID чатов, у которых отключены уведомления
+            isSupportChat: false
         };
 
         // Запуск инициализации при загрузке страницы
@@ -147,7 +168,13 @@
         function initApp() {
             applyTheme();
             applyBrandColor();
-            setupAuthListener();
+            // Ждем инициализации Firebase скриптов на window
+            const checkInterval = setInterval(() => {
+                if (window.auth && window.db) {
+                    clearInterval(checkInterval);
+                    setupAuthListener();
+                }
+            }, 100);
         }
 
         // Применение цветовой темы
@@ -163,14 +190,20 @@
         }
 
         function applyBrandColor() {
-            // Динамическое применение стилей бренда
-            let colorHex = '#047857'; // зеленый по умолчанию
-            if (state.brandColor === 'blue') colorHex = '#2563eb';
-            if (state.brandColor === 'red') colorHex = '#dc2626';
+            let colorHex = '#047857'; // зеленый
+            let hoverHex = '#065f46';
+            if (state.brandColor === 'blue') {
+                colorHex = '#2563eb';
+                hoverHex = '#1d4ed8';
+            } else if (state.brandColor === 'red') {
+                colorHex = '#dc2626';
+                hoverHex = '#b91c1c';
+            }
             document.documentElement.style.setProperty('--brand-color', colorHex);
+            document.documentElement.style.setProperty('--brand-color-hover', hoverHex);
         }
 
-        // Вспомогательное копирование ID в буфер
+        // Копирование ID в буфер
         function copyToClipboard(text) {
             const el = document.createElement('textarea');
             el.value = text;
@@ -184,6 +217,7 @@
         // Кастомные тосты/уведомления
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
+            if (!container) return;
             const toast = document.createElement('div');
             toast.className = `flex items-center gap-3 p-4 rounded-xl shadow-2xl border transition-all duration-300 transform translate-y-2 opacity-0 ${
                 type === 'success' ? 'bg-[#064e3b] border-emerald-500 text-white' : 
@@ -212,7 +246,7 @@
     </script>
 
     <!-- UI TOAST CONTAINER -->
-    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+    <div id="toast-container" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
 
     <script>
         let verificationInterval = null;
@@ -221,30 +255,37 @@
             window.auth.onAuthStateChanged(async (user) => {
                 if (user) {
                     state.user = user;
-                    // Проверка бана до загрузки полного профиля
-                    const userRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', user.uid);
-                    const userSnap = await getDoc(userRef);
+                    
+                    // Загружаем профиль
+                    const userRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', user.uid);
+                    const userSnap = await window.getDoc(userRef);
                     
                     if (userSnap.exists()) {
                         const profile = userSnap.data();
+                        
+                        // Проверка полной блокировки аккаунта
                         if (profile.status === 'banned') {
                             showBannedScreen();
                             return;
                         }
+
+                        // Слушатель системных варнов (предупреждений)
+                        if (profile.warning) {
+                            showWarningModal(profile.warning);
+                        }
+
                         state.profile = profile;
                         
-                        // Если почта не подтверждена, принудительно заставляем подтвердить
                         if (!user.emailVerified && user.email !== 'sobakastalina123@gmail.com') {
                             showVerificationWall();
                         } else {
-                            // Пользователь подтвержден, запускаем основную сессию
                             clearInterval(verificationInterval);
                             hideVerificationWall();
                             hideAuthModal();
                             loadData();
                         }
                     } else {
-                        // Новый пользователь, профиля в бд еще нет
+                        // Если новый юзер
                         if (!user.emailVerified && user.email !== 'sobakastalina123@gmail.com') {
                             showVerificationWall();
                         } else {
@@ -269,7 +310,6 @@
             document.getElementById('app-container').classList.remove('hidden');
         }
 
-        // Переключение входов/регистрации
         function switchAuthMode(mode) {
             const btnLogin = document.getElementById('btn-auth-login');
             const btnReg = document.getElementById('btn-auth-reg');
@@ -309,7 +349,7 @@
             }
         }
 
-        // Регистрация шаг 1: Создание аккаунта и отправка письма
+        // Регистрация шаг 1
         async function handleRegistration(e) {
             e.preventDefault();
             const email = document.getElementById('reg-email').value.trim();
@@ -332,7 +372,7 @@
             try {
                 const cred = await window.createUserWithEmailAndPassword(window.auth, email, pass);
                 await window.sendEmailVerification(cred.user);
-                showToast("Письмо подтверждения отправлено на почту!");
+                showToast("Письмо подтверждения отправлено на почту от Firebase!");
                 showVerificationWall();
             } catch (err) {
                 showToast(err.message, 'error');
@@ -342,12 +382,11 @@
             }
         }
 
-        // Экран принудительного подтверждения
+        // Принудительное подтверждение почты
         function showVerificationWall() {
             document.getElementById('auth-form-container').classList.add('hidden');
             document.getElementById('verification-wall').classList.remove('hidden');
             
-            // Запускаем периодический опрос состояния верификации
             if (verificationInterval) clearInterval(verificationInterval);
             verificationInterval = setInterval(async () => {
                 if (window.auth.currentUser) {
@@ -381,7 +420,7 @@
             }
         }
 
-        // Шаг ввода никнейма и принятия условий площадки
+        // Никнейм шаг
         function showNicknameStep() {
             document.getElementById('auth-form-container').classList.add('hidden');
             document.getElementById('verification-wall').classList.add('hidden');
@@ -398,19 +437,18 @@
                 showToast("Минимальная длина никнейма — 3 символа", 'error');
                 return;
             }
-            // Показ соглашения с правилами
             document.getElementById('nickname-step').classList.add('hidden');
             document.getElementById('rules-acceptance-modal').classList.remove('hidden');
         }
 
-        // Принятие условий площадки и финальное создание профиля в БД
+        // Принятие условий и создание профиля
         async function acceptRulesAndFinish() {
             const nickname = document.getElementById('reg-nickname').value.trim();
             const user = window.auth.currentUser;
             if (!user) return;
 
             try {
-                const userRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', user.uid);
+                const userRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', user.uid);
                 const isSystemAdmin = (user.email === 'sobakastalina123@gmail.com');
                 const profileData = {
                     uid: user.uid,
@@ -425,9 +463,9 @@
                     avatar: '',
                     isAdmin: isSystemAdmin
                 };
-                await setDoc(userRef, profileData);
+                await window.setDoc(userRef, profileData);
                 state.profile = profileData;
-                showToast("Добро пожаловать в Relook!");
+                showToast("Регистрация успешно завершена!");
                 
                 document.getElementById('rules-acceptance-modal').classList.add('hidden');
                 hideAuthModal();
@@ -437,16 +475,16 @@
             }
         }
 
-        // Обработка блокировки аккаунта
+        // Показ бана
         function showBannedScreen() {
             document.body.innerHTML = `
                 <div class="h-full w-full flex flex-col items-center justify-center bg-[#07090e] p-6 text-center">
                     <div class="w-24 h-24 rounded-full bg-red-950/50 border border-red-500/50 flex items-center justify-center mb-6 animate-pulse">
                         <i class="fa-solid fa-ban text-red-500 text-4xl"></i>
                     </div>
-                    <h1 class="text-3xl font-extrabold text-white mb-4">Ваш аккаунт временно или навсегда заблокирован</h1>
+                    <h1 class="text-3xl font-extrabold text-white mb-4">Ваш аккаунт заблокирован</h1>
                     <p class="text-gray-400 max-w-md mb-8 leading-relaxed">
-                        Администрация Relook приняла решение о блокировке за нарушение правил площадки. Решение обжалованию не подлежит.
+                        Администрация Relook приняла решение о блокировке вашего аккаунта без возможности апелляции за нарушение правил ресейл-площадки.
                     </p>
                     <button onclick="handleLogoutSystem()" class="px-6 py-3 bg-red-600 hover:bg-red-700 font-bold rounded-xl transition duration-300">
                         Выйти из аккаунта
@@ -459,9 +497,26 @@
             await window.signOut(window.auth);
             window.location.reload();
         }
+
+        // Предупреждение от админа
+        function showWarningModal(reason) {
+            const backdrop = document.getElementById('warning-popup-backdrop');
+            const textEl = document.getElementById('warning-popup-reason');
+            textEl.innerText = reason;
+            backdrop.classList.remove('hidden');
+        }
+
+        async function closeWarningPopup() {
+            document.getElementById('warning-popup-backdrop').classList.add('hidden');
+            // Сбрасываем варн в бд, чтобы больше не надоедал
+            if (state.user) {
+                const userRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', state.user.uid);
+                await window.updateDoc(userRef, { warning: null });
+            }
+        }
     </script>
 
-    <!-- AUTHENTICATION SCREEN CONTROLLER -->
+    <!-- AUTHENTICATION SCREEN -->
     <div id="auth-modal" class="h-full w-full flex items-center justify-center bg-gradient-to-br from-[#090d16] via-[#051a14] to-[#0d0a1b] p-4 overflow-y-auto">
         <div class="w-full max-w-md bg-[#0e1626]/95 border border-emerald-950/40 rounded-3xl shadow-2xl p-8 backdrop-blur-md relative overflow-hidden">
             
@@ -470,12 +525,10 @@
 
             <div class="text-center mb-8">
                 <span class="text-3xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-200">RELOOK</span>
-                <p class="text-xs text-gray-400 mt-2">Элитная ресейл-площадка оригинальной одежды</p>
+                <p class="text-xs text-gray-400 mt-2">Ресейл-площадка оригинальной брендовой одежды</p>
             </div>
 
-            <!-- Форма авторизации и регистрации -->
             <div id="auth-form-container">
-                <!-- Кнопки входа и регистрации сверху -->
                 <div class="flex bg-[#070b13] p-1.5 rounded-2xl mb-6 border border-emerald-950/20">
                     <button id="btn-auth-login" onclick="switchAuthMode('login')" class="flex-1 py-3 text-center rounded-xl bg-brand-800 text-white font-bold transition-all shadow-md">
                         Вход
@@ -495,7 +548,7 @@
                         <label class="block text-xs font-semibold text-gray-400 mb-2">Пароль</label>
                         <input type="password" id="login-pass" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm text-white" placeholder="••••••••">
                     </div>
-                    <button type="submit" class="w-full py-4 bg-brand-700 hover:bg-brand-600 rounded-xl text-white font-bold transition duration-300 shadow-lg shadow-brand-900/30 mt-2">
+                    <button type="submit" class="w-full py-4 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-white font-bold transition duration-300 shadow-lg mt-2">
                         Войти
                     </button>
                 </form>
@@ -507,7 +560,7 @@
                         <input type="email" id="reg-email" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm text-white" placeholder="email@example.com">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold text-gray-400 mb-2">Придумайте пароль (минимум 6 символов)</label>
+                        <label class="block text-xs font-semibold text-gray-400 mb-2">Пароль (мин. 6 символов)</label>
                         <input type="password" id="reg-pass" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm text-white" placeholder="••••••••">
                     </div>
                     <div>
@@ -515,103 +568,81 @@
                         <input type="password" id="reg-pass-confirm" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm text-white" placeholder="••••••••">
                     </div>
                     <button type="submit" class="w-full py-4 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-white font-bold transition duration-300 shadow-lg mt-2">
-                        Продолжить
+                        Зарегистрироваться
                     </button>
                 </form>
             </div>
 
-            <!-- СТЕНА ПОДТВЕРЖДЕНИЯ (НЕЛЬЗЯ УЙТИ) -->
+            <!-- Подтверждение почты -->
             <div id="verification-wall" class="hidden text-center space-y-6 py-6">
                 <div class="w-20 h-20 rounded-full bg-emerald-950/50 border border-brand-500/50 flex items-center justify-center mx-auto animate-pulse">
                     <i class="fa-solid fa-envelope-open-text text-brand-400 text-3xl"></i>
                 </div>
                 <h3 class="text-xl font-bold">Подтверждение почты</h3>
-                <p class="text-sm text-gray-400 leading-relaxed">
+                <p class="text-sm text-gray-400 leading-relaxed font-sans">
                     На указанную почту отправлено письмо с ссылкой от <strong class="text-emerald-400">Firebase</strong>. <br>
-                    Пожалуйста, кликните по ссылке в письме. Мы автоматически определим вход.
+                    Перейдите по ссылке для верификации почтового адреса. Мы автоматически обновим экран.
                 </p>
                 <div class="pt-4 space-y-3">
                     <button onclick="manualCheckVerification()" class="w-full py-3 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-white font-bold transition duration-300">
-                        Я подтвердил почту (Проверить статус)
+                        Я подтвердил (Проверить статус)
                     </button>
-                    <p class="text-xs text-amber-400"><i class="fa-solid fa-circle-exclamation mr-1"></i> С этого шага невозможно уйти до реального подтверждения.</p>
+                    <p class="text-[10px] text-amber-500"><i class="fa-solid fa-circle-exclamation mr-1"></i> Невозможно уйти без верификации.</p>
                 </div>
             </div>
 
-            <!-- ШАГ НИКНЕЙМА -->
+            <!-- Никнейм -->
             <div id="nickname-step" class="hidden text-center space-y-5 py-4">
-                <h3 class="text-xl font-bold text-white mb-2">Почти готово!</h3>
+                <h3 class="text-xl font-bold text-white mb-2">Добро пожаловать!</h3>
                 <p class="text-sm text-gray-400">Придумайте ваш уникальный псевдоним на Relook</p>
                 <div class="text-left">
                     <label class="block text-xs font-semibold text-gray-400 mb-2">Ваш Никнейм</label>
                     <input type="text" id="reg-nickname" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm text-white" placeholder="Luxury_Seller">
                 </div>
-                <button onclick="submitNicknameStep()" class="w-full py-4 bg-brand-700 hover:bg-brand-600 rounded-xl text-white font-bold transition duration-300 mt-4">
+                <button onclick="submitNicknameStep()" class="w-full py-4 bg-emerald-700 hover:bg-emerald-600 rounded-xl text-white font-bold transition duration-300 mt-4">
                     Продолжить
                 </button>
             </div>
 
-            <!-- ШАГ ПРАВИЛ ПЛОЩАДКИ (ФИНАЛ СОГЛАШЕНИЯ) -->
-            <div id="rules-acceptance-modal" class="hidden text-left space-y-4 py-2 max-h-[80vh] flex flex-col">
-                <h3 class="text-lg font-bold text-white mb-1 text-center border-b border-gray-800 pb-2">Лицензионное Соглашение Relook</h3>
-                <div class="overflow-y-auto max-h-[45vh] pr-1 space-y-4 text-xs text-gray-400 leading-relaxed">
-                    <p class="font-semibold text-gray-300">Правила и условия пользования ресейл-площадкой RELOOK</p>
-                    
+            <!-- Правила и условия -->
+            <div id="rules-acceptance-modal" class="hidden text-left space-y-4 py-2 max-h-[85vh] flex flex-col">
+                <h3 class="text-lg font-bold text-white mb-1 text-center border-b border-gray-800 pb-2">Условия пользования Relook</h3>
+                <div class="overflow-y-auto max-h-[40vh] pr-1 space-y-4 text-[11px] text-gray-400 leading-relaxed font-sans">
                     <div>
                         <h4 class="font-bold text-emerald-400 mb-1">1. Особые права модерации и жесткий контроль</h4>
-                        <p><strong>Блокировка без предупреждения:</strong> Администрация площадки имеет право в любой момент заблокировать ваш аккаунт без уведомлений, предупреждений, объяснения причин и права на апелляцию.</p>
-                        <p><strong>Контроль переписок:</strong> Модераторы имеют полное право в любой момент проверять ваши личные чаты, профили и каждое созданное объявление для выявления мошенничества, продажи подделок или увода клиентов.</p>
-                        <p><strong>Удаление контента:</strong> Любое объявление или отзыв могут быть скрыты или удалены модератором в одностороннем порядке.</p>
+                        <p>• <strong>Блокировка без предупреждения:</strong> Администрация площадки имеет право в любой момент заблокировать ваш аккаунт без уведомлений, предупреждений, объяснения причин и права на апелляцию.</p>
+                        <p>• <strong>Контроль переписок:</strong> Модераторы имеют полное право в любой момент проверять ваши личные чаты, профили и каждое созданное объявление для выявления мошенничества, продажи подделок или увода клиентов.</p>
+                        <p>• <strong>Удаление контента:</strong> Любое объявление или отзыв могут быть скрыты или удалены модератором в одностороннем порядке.</p>
                     </div>
-
                     <div>
                         <h4 class="font-bold text-emerald-400 mb-1">2. Запрет на переход в другие мессенджеры</h4>
-                        <p><strong>Закрытый контур:</strong> Все обсуждения деталей сделки, обмены фотографиями, обсуждение цен и условий доставки должны происходить исключительно во встроенном чате площадки.</p>
-                        <p><strong>Жесткий запрет:</strong> Любые попытки перевести покупателя или продавца в сторонние мессенджеры (Telegram, WhatsApp, Viber, Instagram и др.), обменяться номерами телефонов или ссылками на соцсети строго запрещены. За это следует моментальный вечный бан.</p>
-                        <p><strong>Исключение:</strong> Переход на внешние каналы связи разрешен только в том случае, если вы получили прямое сообщение или ссылку от официальной службы поддержки нашей площадки.</p>
+                        <p>• <strong>Закрытый контур:</strong> Все обсуждения деталей сделки, обмены фотографиями, обсуждение цен и условий доставки должны происходить исключительно во встроенном чате площадки.</p>
+                        <p>• <strong>Жесткий запрет:</strong> Любые попытки перевести покупателя или продавца в сторонние мессенджеры (Telegram, WhatsApp, Viber, Instagram и др.), обменяться номерами телефонов или ссылками на соцсети строго запрещены. За это следует моментальный вечный бан.</p>
+                        <p>• <strong>Исключение:</strong> Переход на внешние каналы связи разрешен только в том случае, если вы получили прямое сообщение или ссылку от официальной службы поддержки нашей площадки.</p>
                     </div>
-
                     <div>
                         <h4 class="font-bold text-emerald-400 mb-1">3. Общие положения</h4>
-                        <p><strong>Роль платформы:</strong> Сервис предоставляет исключительно техническое пространство для размещения объявлений.</p>
-                        <p><strong>Стороны сделки:</strong> Площадка не является участником, посредником, агентом или юридическим гарантом сделок между пользователями.</p>
-                        <p><strong>Аккаунты:</strong> Один пользователь имеет право создать и использовать только один профиль. Мультиаккаунтинг запрещен.</p>
+                        <p>• <strong>Роль платформы:</strong> Сервис предоставляет исключительно техническое пространство для размещения объявлений.</p>
+                        <p>• <strong>Стороны сделки:</strong> Площадка не является участником, посредником, агентом или юридическим гарантом сделок между пользователями.</p>
+                        <p>• <strong>Аккаунты:</strong> Один пользователь имеет право создать и использовать только один профиль. Мультиаккаунтинг запрещен.</p>
                     </div>
-
                     <div>
                         <h4 class="font-bold text-emerald-400 mb-1">4. Правила публикации объявлений</h4>
                         <p>Разрешена продажа только оригинальной одежды, обуви и аксессуаров. Запрещено создавать дубликаты.</p>
                     </div>
-
                     <div>
                         <h4 class="font-bold text-emerald-400 mb-1">5. Требования к фотографиям и аутентичности</h4>
-                        <p><strong>Запрет реплик:</strong> Продажа копий, реплик, фейков и «люкс-зеркал» брендов строго запрещена. Попытка выдать подделку за оригинал карается вечным баном. Требуется не менее 3 реальных фото.</p>
+                        <p>• <strong>Запрет реплик:</strong> Продажа копий, реплик, фейков и «люкс-зеркал» брендов строго запрещена. Попытка выдать подделку за оригинал карается вечным баном.</p>
+                        <p>• <strong>Реальность фото:</strong> Объявление должно содержать минимум 3 «живых» фотографии товара. Скриншоты дефектов, бирок и швов обязательны.</p>
                     </div>
-
                     <div>
-                        <h4 class="font-bold text-emerald-400 mb-1">6. Шкала состояния вещей</h4>
-                        <p>NWT (Новое с биркой), Отличное, Хорошее, Удовлетворительное.</p>
-                    </div>
-
-                    <div>
-                        <h4 class="font-bold text-emerald-400 mb-1">7. Отправка и доставка товара</h4>
-                        <p>Отправка в течение 3 рабочих дней с предоставлением трек-номера в чат.</p>
-                    </div>
-
-                    <div>
-                        <h4 class="font-bold text-emerald-400 mb-1">8. Программа защиты покупателей (Гарантия до 80%)</h4>
-                        <p>Компенсация до 80% ущерба в случае мошенничества, лимит выплаты ограничен 30 000 рублей.</p>
-                    </div>
-
-                    <div>
-                        <h4 class="font-bold text-emerald-400 mb-1">9. Обязательные документы для компенсации</h4>
-                        <p>Скриншоты, Чек об оплате, Талон из полиции, Видеозапись вскрытия посылки.</p>
+                        <h4 class="font-bold text-emerald-400 mb-1">8. Защита покупателей (Гарантия до 80%)</h4>
+                        <p>Платформа компенсирует до 80% от подтвержденного материального ущерба в случае мошенничества, лимит выплаты ограничен 30 000 рублей. Требуются скриншоты, чек и видеозапись вскрытия посылки.</p>
                     </div>
                 </div>
-
-                <div class="pt-2 border-t border-gray-800">
-                    <button onclick="acceptRulesAndFinish()" class="w-full py-4 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl transition duration-300">
-                        Я согласен с правилами и буду выполнять их. В случае нарушения мой аккаунт будет заблокирован.
+                <div class="pt-2 border-t border-gray-850">
+                    <button onclick="acceptRulesAndFinish()" class="w-full py-4 bg-emerald-700 hover:bg-emerald-600 text-white text-[10px] font-bold rounded-xl transition duration-300">
+                        Я согласен с правилами и буду выполнять их, в случае нарушения мой аккаунт будет ограничен или заблокирован
                     </button>
                 </div>
             </div>
@@ -622,7 +653,7 @@
     <!-- MAIN PLATFORM STRUCTURE -->
     <div id="app-container" class="hidden flex-1 flex h-full overflow-hidden relative">
         
-        <!-- SIDEBAR (desktop) / BOTTOM BAR (mobile setup via CSS layout classes) -->
+        <!-- SIDEBAR (desktop) -->
         <aside class="w-64 bg-[#090d16] border-r border-emerald-950/20 flex flex-col justify-between h-full shrink-0 hidden md:flex">
             <div>
                 <div class="p-6">
@@ -633,7 +664,7 @@
                         <i class="fa-solid fa-house"></i> Главная
                     </button>
                     <button onclick="navigateTo('profile')" class="nav-item w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-emerald-950/20 text-left font-medium" data-view="profile">
-                        <i class="fa-solid fa-user"></i> Мой Профиль
+                        <i class="fa-solid fa-user"></i> Профиль
                     </button>
                     <button onclick="navigateTo('my-listings')" class="nav-item w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-emerald-950/20 text-left font-medium" data-view="my-listings">
                         <i class="fa-solid fa-tags"></i> Мои объявления
@@ -642,7 +673,7 @@
                         <i class="fa-solid fa-headset"></i> Поддержка
                     </button>
                     <button id="nav-btn-premium" onclick="navigateTo('premium')" class="nav-item w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-emerald-950/20 text-left font-medium" data-view="premium">
-                        <i class="fa-solid fa-gem text-amber-400"></i> Премиум
+                        <i class="fa-solid fa-gem text-amber-400 animate-pulse"></i> Премиум
                     </button>
                     <button onclick="navigateTo('settings')" class="nav-item w-full flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-emerald-950/20 text-left font-medium" data-view="settings">
                         <i class="fa-solid fa-gear"></i> Настройки
@@ -651,7 +682,6 @@
             </div>
             
             <div class="p-4 border-t border-emerald-950/20 space-y-2">
-                <!-- Кнопка админ панели, скрыта по умолчанию -->
                 <button id="admin-sidebar-btn" onclick="navigateTo('admin')" class="hidden w-full flex items-center gap-4 px-4 py-3 rounded-xl bg-red-950/40 border border-red-500/30 text-red-300 hover:bg-red-900/50 hover:text-white transition-all text-left font-medium">
                     <i class="fa-solid fa-user-shield"></i> Панель админа
                 </button>
@@ -669,9 +699,9 @@
                 <button id="admin-mobile-btn" onclick="navigateTo('admin')" class="hidden px-3 py-1.5 rounded-lg bg-red-950/50 border border-red-500/30 text-red-300 text-xs">Админ</button>
             </header>
 
-            <!-- INTERACTIVE SCREEN PORT -->
+            <!-- VIEWPORT -->
             <div id="view-port" class="flex-1 overflow-y-auto p-4 md:p-8">
-                <!-- Контент загружается динамически в соответствующие разделы ниже -->
+                <!-- Контент загружается динамически -->
             </div>
 
             <!-- BOTTOM MOBILE NAVIGATION BAR -->
@@ -683,7 +713,7 @@
                     <i class="text-lg fa-solid fa-user"></i><span class="text-[10px]">Профиль</span>
                 </button>
                 <button onclick="navigateTo('my-listings')" class="mobile-nav flex flex-col items-center gap-1 text-gray-400" data-view="my-listings">
-                    <i class="text-lg fa-solid fa-tags"></i><span class="text-[10px]">Мои вещи</span>
+                    <i class="text-lg fa-solid fa-tags"></i><span class="text-[10px]">Вещи</span>
                 </button>
                 <button onclick="navigateTo('support')" class="mobile-nav flex flex-col items-center gap-1 text-gray-400" data-view="support">
                     <i class="text-lg fa-solid fa-headset"></i><span class="text-[10px]">Чат</span>
@@ -698,61 +728,72 @@
         </main>
     </div>
 
-    <!-- TEMPLATE COMPONENT: VIEW SCREEN PORTALS -->
+    <!-- WARNING POPUP SYSTEM (FOR USER ALERTS) -->
+    <div id="warning-popup-backdrop" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md z-[99999] flex items-center justify-center p-4">
+        <div class="bg-amber-950/90 border border-amber-500 rounded-3xl p-8 max-w-md w-full text-center space-y-6">
+            <div class="w-16 h-16 rounded-full bg-amber-500/20 border border-amber-500 flex items-center justify-center mx-auto text-amber-400 text-3xl">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h2 class="text-2xl font-black text-white">Вы получили предупреждение!</h2>
+            <p id="warning-popup-reason" class="text-sm text-gray-300 leading-relaxed bg-[#0b0f19] p-4 rounded-xl border border-amber-500/30"></p>
+            <button onclick="closeWarningPopup()" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-black font-extrabold rounded-xl transition">
+                Я понял и обязуюсь соблюдать правила
+            </button>
+        </div>
+    </div>
+
+    <!-- TEMPLATES FOR CHAT AND DETAILED VIEWS -->
     <div id="templates-container" class="hidden">
         
-        <!-- SCREEN: HOME (LISTINGS GRID) -->
+        <!-- SCREEN: HOME -->
         <div id="view-home" class="space-y-6">
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h2 class="text-2xl font-extrabold text-white">Каталог элитных вещей</h2>
-                    <p class="text-xs text-gray-400 mt-1">Тщательный контроль оригинальности и эксклюзивное комьюнити</p>
+                    <h2 class="text-2xl font-extrabold text-white">Эксклюзивный ресейл-каталог</h2>
+                    <p class="text-xs text-gray-400 mt-1">Только строго оригинальные брендовые вещи</p>
                 </div>
                 <div class="relative w-full md:w-80">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
-                    <input type="text" id="search-input" oninput="searchListings(this.value)" placeholder="Поиск по брендам, обуви..." class="w-full bg-[#0e1626] border border-emerald-950/20 rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+                    <input type="text" id="search-input" oninput="searchListings(this.value)" placeholder="Поиск брендов, моделей, цветов..." class="w-full bg-[#0e1626] border border-emerald-950/20 rounded-xl pl-11 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
                 </div>
             </div>
 
-            <!-- Сетка карточек -->
             <div id="listings-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <!-- Карточки рендерятся динамически -->
+                <!-- Карточки объявлений -->
             </div>
             
             <div id="listings-empty-state" class="hidden text-center py-20 text-gray-500">
-                <i class="fa-solid fa-box-open text-5xl mb-4"></i>
-                <p class="text-sm font-medium">Объявлений пока нет или они находятся на проверке.</p>
+                <i class="fa-solid fa-box-open text-5xl mb-4 text-brand-theme"></i>
+                <p class="text-sm font-medium">Пока нет активных объявлений или они на проверке у админа.</p>
             </div>
         </div>
 
-        <!-- SCREEN: LISTING DETAILED VIEW -->
+        <!-- SCREEN: DETAIL VIEW -->
         <div id="view-listing-detail" class="max-w-4xl mx-auto space-y-6">
-            <!-- Кнопка вернуться назад -->
             <button onclick="navigateTo('home')" class="flex items-center gap-2 text-gray-400 hover:text-white transition duration-300">
-                <i class="fa-solid fa-arrow-left"></i> К списку объявлений
+                <i class="fa-solid fa-arrow-left"></i> На главную
             </button>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Карусель изображений -->
+                <!-- Галерея -->
                 <div class="space-y-4">
                     <div class="relative aspect-square rounded-3xl overflow-hidden bg-[#070b13] border border-emerald-950/10">
-                        <img id="detail-main-img" class="w-full h-full object-cover" src="" alt="Main">
-                        <span id="detail-badge-original" class="hidden absolute top-4 left-4 bg-emerald-500/90 text-white font-bold text-xs px-3 py-1 rounded-full border border-emerald-400/30">
+                        <img id="detail-main-img" class="w-full h-full object-cover" src="" alt="Main Image">
+                        <span id="detail-badge-original" class="hidden absolute top-4 left-4 bg-emerald-500 text-white font-extrabold text-xs px-3 py-1 rounded-full border border-emerald-400/40">
                             <i class="fa-solid fa-shield-halved mr-1"></i> Оригинал
                         </span>
                     </div>
-                    <!-- Миниатюры для переключения -->
                     <div id="detail-thumbnails" class="flex gap-2 overflow-x-auto py-1">
-                        <!-- Дополнительные фотки -->
+                        <!-- Сюда вставляются дополнительные фотки -->
                     </div>
                 </div>
 
-                <!-- Подробности о товаре -->
+                <!-- Подробности лота -->
                 <div class="space-y-6">
                     <div>
                         <span id="detail-id-badge" class="text-[10px] text-gray-500 font-mono">ID: ...</span>
                         <h1 id="detail-title" class="text-3xl font-extrabold text-white mt-1"></h1>
-                        <p id="detail-price" class="text-2xl font-black text-brand-400 mt-2"></p>
+                        <p id="detail-price" class="text-2xl font-black text-brand-theme mt-2"></p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4 bg-[#0e1626] border border-emerald-950/20 p-4 rounded-2xl text-xs">
@@ -779,7 +820,7 @@
                         <p id="detail-desc" class="text-sm text-gray-300 leading-relaxed bg-[#070b13] p-4 rounded-xl border border-emerald-950/10 min-h-[100px]"></p>
                     </div>
 
-                    <!-- Карточка Продавца -->
+                    <!-- Карточка продавца -->
                     <div class="bg-[#0e1626] border border-emerald-950/20 p-4 rounded-2xl flex items-center justify-between">
                         <div class="flex items-center gap-3 cursor-pointer" id="seller-profile-clickable">
                             <div class="relative w-12 h-12 rounded-full overflow-hidden bg-brand-900 border border-brand-500/40 flex items-center justify-center">
@@ -795,7 +836,7 @@
                             </div>
                         </div>
                         
-                        <button id="btn-write-seller" onclick="initiateChat()" class="px-5 py-3 bg-brand-700 hover:bg-brand-600 rounded-xl text-white font-bold text-xs transition duration-300 shadow-md">
+                        <button id="btn-write-seller" onclick="initiateChat()" class="px-5 py-3 btn-brand-theme rounded-xl text-white font-bold text-xs transition duration-300 shadow-md">
                             <i class="fa-solid fa-comment mr-2"></i> Написать
                         </button>
                     </div>
@@ -803,9 +844,9 @@
             </div>
         </div>
 
-        <!-- SCREEN: CHAT INTERACTIVE VIEW -->
+        <!-- SCREEN: INTERACTIVE CHAT -->
         <div id="view-chat" class="h-full flex flex-col bg-[#070b13] border border-emerald-950/10 rounded-3xl overflow-hidden">
-            <!-- Header -->
+            <!-- Header чата -->
             <div class="p-4 bg-[#0e1626] border-b border-emerald-950/20 flex items-center justify-between">
                 <div class="flex items-center gap-3 cursor-pointer" id="chat-partner-profile-clickable">
                     <button onclick="navigateTo('home')" class="md:hidden text-gray-400 hover:text-white mr-1"><i class="fa-solid fa-chevron-left"></i></button>
@@ -820,23 +861,22 @@
                     </div>
                 </div>
 
-                <!-- Три точки меню чата -->
                 <div class="relative">
                     <button id="chat-menu-btn" onclick="toggleChatMenu()" class="w-10 h-10 rounded-xl hover:bg-[#152035] text-gray-400 hover:text-white flex items-center justify-center transition">
                         <i class="fa-solid fa-ellipsis-vertical text-lg"></i>
                     </button>
-                    <!-- Выпадающее меню параметров чата -->
+                    <!-- Шторка параметров чата -->
                     <div id="chat-menu-dropdown" class="hidden absolute right-0 top-12 w-64 bg-[#0f192b] border border-emerald-950/30 rounded-2xl shadow-2xl p-2 z-50 space-y-1">
-                        <button onclick="toggleChatNotifications()" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-[#182944] text-xs flex items-center gap-3">
+                        <button onclick="toggleChatNotifications()" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-[#182944] text-xs flex items-center gap-3 text-white">
                             <i id="chat-notif-icon" class="fa-solid fa-bell"></i>
-                            <span id="chat-notif-text">Включить уведомления</span>
+                            <span id="chat-notif-text">Уведомления</span>
                         </button>
                         <button onclick="openComplaintModal()" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-[#182944] text-xs text-red-400 hover:text-red-300 flex items-center gap-3">
-                            <i class="fa-solid fa-circle-exclamation"></i> Пожаловаться на сообщение
+                            <i class="fa-solid fa-circle-exclamation"></i> Пожаловаться
                         </button>
                         <button id="chat-btn-block" onclick="toggleBlockUser()" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-[#182944] text-xs flex items-center gap-3 text-amber-500">
                             <i class="fa-solid fa-user-slash"></i>
-                            <span id="chat-block-text">Заблокировать собеседника</span>
+                            <span id="chat-block-text">Блокировка собеседника</span>
                         </button>
                         <button id="chat-btn-delete" onclick="deleteChatPermanently()" class="w-full text-left px-4 py-2.5 rounded-xl hover:bg-[#182944] text-xs text-red-500 hover:bg-red-950/20 flex items-center gap-3">
                             <i class="fa-solid fa-trash-can"></i> Удалить чат навсегда
@@ -849,60 +889,271 @@
                 </div>
             </div>
 
-            <!-- Индикатор товара в шапке чата -->
+            <!-- Баннер товара -->
             <div id="chat-listing-banner" class="bg-[#0e1626]/40 px-4 py-2 border-b border-emerald-950/10 flex items-center gap-3">
                 <div class="w-10 h-10 rounded-lg overflow-hidden bg-gray-900 border border-emerald-950/10">
-                    <img id="chat-listing-img" class="w-full h-full object-cover" src="" alt="Item">
+                    <img id="chat-listing-img" class="w-full h-full object-cover" src="" alt="Product">
                 </div>
                 <div class="flex-1">
                     <h5 id="chat-listing-title" class="text-xs font-bold text-white"></h5>
-                    <p id="chat-listing-price" class="text-[10px] text-brand-400"></p>
+                    <p id="chat-listing-price" class="text-[10px] text-brand-theme"></p>
                 </div>
-                <!-- Кнопка оценки продавца / покупателя (если сообщений > 5) -->
+                <!-- Кнопка оценки сделки -->
                 <button id="btn-rate-deal" onclick="openReviewModal()" class="hidden px-3 py-1.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500 text-[10px] font-bold rounded-lg hover:text-black transition">
-                    Оценить пользователя
+                    Оценить сделку
                 </button>
             </div>
 
             <!-- Список сообщений -->
-            <div id="chat-messages-area" class="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col justify-end">
-                <!-- Сообщения подтягиваются из Firestore -->
+            <div id="chat-messages-area" class="flex-1 overflow-y-auto p-4 space-y-3 flex flex-col justify-end min-h-[250px]">
+                <!-- Подгружаются динамически -->
             </div>
 
-            <!-- Область ввода сообщения -->
+            <!-- Строка ввода -->
             <form id="chat-send-form" onsubmit="sendChatMessage(event)" class="p-4 bg-[#0e1626] border-t border-emerald-950/20 flex gap-3">
-                <input type="text" id="chat-msg-input" placeholder="Введите ваше сообщение..." required class="flex-1 bg-[#070b13] border border-emerald-950/20 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm text-white">
-                <button type="submit" class="w-12 h-12 bg-brand-700 hover:bg-brand-600 rounded-xl flex items-center justify-center text-white transition shadow-lg shadow-brand-900/10 shrink-0">
+                <input type="text" id="chat-msg-input" placeholder="Напишите ваше сообщение здесь..." required class="flex-1 bg-[#070b13] border border-emerald-950/20 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm text-white">
+                <button type="submit" class="w-12 h-12 btn-brand-theme rounded-xl flex items-center justify-center text-white transition shadow-lg shrink-0">
                     <i class="fa-solid fa-paper-plane"></i>
                 </button>
             </form>
         </div>
 
-    </div>
-
-    <!-- TEMPLATES: ADDITIONAL VIEW PORTS -->
-    <div id="additional-templates" class="hidden">
-        
-        <!-- SCREEN: MY LISTINGS (CREATION AND MANAGEMENT) -->
+        <!-- SCREEN: MY LISTINGS -->
         <div id="view-my-listings" class="space-y-6">
             <div class="flex items-center justify-between">
                 <div>
-                    <h2 class="text-2xl font-extrabold text-white">Мои объявления</h2>
-                    <p class="text-xs text-gray-400 mt-1">Создание, редактирование и статистика ваших предложений</p>
+                    <h2 class="text-2xl font-extrabold text-white">Управление объявлениями</h2>
+                    <p class="text-xs text-gray-400 mt-1">Здесь вы можете отредактировать, удалить или добавить свои вещи</p>
                 </div>
-                <button onclick="openCreateListingWizard()" class="px-5 py-3 bg-brand-700 hover:bg-brand-600 rounded-xl text-white font-bold text-xs transition duration-300 shadow-md flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> Выставить вещь
+                <button onclick="openCreateListingWizard()" class="px-5 py-3 btn-brand-theme rounded-xl text-white font-bold text-xs transition duration-300 shadow-md flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> Выложить вещь
                 </button>
             </div>
 
-            <!-- Сетка созданных объявлений -->
             <div id="my-listings-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <!-- Объявления текущего юзера -->
+                <!-- Лоты -->
             </div>
 
             <div id="my-listings-empty" class="hidden text-center py-20 text-gray-500">
                 <i class="fa-solid fa-tags text-5xl mb-4"></i>
-                <p class="text-sm">Вы еще не выложили ни одного лота.</p>
+                <p class="text-sm">Вы еще не добавили ни одного предложения.</p>
+            </div>
+        </div>
+
+        <!-- SCREEN: USER PROFILE -->
+        <div id="view-profile" class="space-y-6">
+            <div class="bg-[#0e1626] border border-emerald-950/20 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+                <div class="absolute -top-12 -right-12 w-32 h-32 bg-brand-700/5 rounded-full blur-2xl"></div>
+
+                <div class="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+                    <div class="relative w-24 h-24 rounded-full overflow-hidden bg-brand-900 border-2 border-brand-500/30 flex items-center justify-center">
+                        <img id="profile-avatar" class="w-full h-full object-cover hidden" src="" alt="Avatar">
+                        <i id="profile-avatar-fallback" class="fa-solid fa-user text-white text-3xl"></i>
+                    </div>
+
+                    <div class="space-y-2">
+                        <div class="flex flex-col md:flex-row items-center gap-3">
+                            <h2 id="profile-nickname" class="text-2xl font-black text-white">...</h2>
+                            <span id="profile-tier-badge" class="px-3 py-1 rounded-full text-xs font-extrabold uppercase text-center">...</span>
+                        </div>
+                        <p id="profile-expire" class="text-[10px] text-gray-400"></p>
+                        <p id="profile-reg-date" class="text-[10px] text-gray-500 font-mono"></p>
+                        <p id="profile-unique-id" class="text-[10px] text-gray-500 font-mono"></p>
+
+                        <div class="flex items-center gap-2 pt-1">
+                            <div class="flex text-amber-400 text-sm" id="profile-stars"></div>
+                            <span id="profile-rating-info" class="text-xs text-gray-300 font-bold">5.0 (0 отзывов)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3 w-full md:w-auto">
+                    <button id="profile-edit-btn" onclick="openEditProfileModal()" class="px-5 py-3 bg-[#152035] hover:bg-gray-800 rounded-xl font-bold text-xs transition duration-300">
+                        Редактировать
+                    </button>
+                    <button id="profile-reviews-btn" onclick="showUserReviews()" class="px-5 py-3 bg-brand-900/40 text-brand-theme hover:bg-brand-800 border border-brand-500/20 rounded-xl font-bold text-xs transition duration-300">
+                        Мои отзывы
+                    </button>
+                    <button id="profile-upgrade-btn" onclick="navigateTo('premium')" class="px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-extrabold text-xs rounded-xl transition duration-300">
+                        Улучшить тариф
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-lg font-bold text-white" id="profile-listings-header">Объявления продавца</h3>
+                <div id="profile-listings-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <!-- Загружается динамически -->
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: PREMIUM -->
+        <div id="view-premium" class="max-w-4xl mx-auto space-y-8">
+            <div class="text-center space-y-2">
+                <h2 class="text-3xl font-extrabold text-white">Режимы подписок RELOOK</h2>
+                <p class="text-sm text-gray-400 max-w-md mx-auto">Расширьте свои возможности ресейла и измените визуальный стиль бренда под себя.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Карточка RePlus -->
+                <div class="bg-gradient-to-b from-[#1b1c1e] to-[#0d0f11] border border-amber-500/20 rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-amber-400 text-xs font-extrabold tracking-widest uppercase bg-amber-500/10 px-3 py-1 rounded-full">Тариф RePlus</span>
+                            <i class="fa-solid fa-star text-amber-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-black text-white">Золотой статус</h3>
+                        
+                        <ul class="mt-6 space-y-3 text-xs text-gray-300">
+                            <li><i class="fa-solid fa-check text-amber-400 mr-2"></i> Опция «Оригинал» (до 2 вещей в месяц)</li>
+                            <li><i class="fa-solid fa-check text-amber-400 mr-2"></i> Лимит до 8 закреплений переписок в верху списка</li>
+                            <li><i class="fa-solid fa-check text-amber-400 mr-2"></i> Блокировка нежелательных лиц в чате</li>
+                            <li><i class="fa-solid fa-check text-amber-400 mr-2"></i> Модерация и уникальная смена аватара</li>
+                        </ul>
+                    </div>
+
+                    <div class="mt-8 space-y-4">
+                        <select id="premium-select-replus" class="w-full bg-[#0a0a0c] border border-amber-500/30 rounded-xl px-4 py-3 text-sm text-white">
+                            <option value="replus-1">1 Месяц — 200 ₽</option>
+                            <option value="replus-3">3 Месяца — 550 ₽</option>
+                            <option value="replus-6">6 Месяцев — 1000 ₽</option>
+                        </select>
+                        <button onclick="purchasePlan('replus')" class="w-full py-4 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-black font-extrabold rounded-xl transition">
+                            Активировать RePlus
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Карточка RePremium -->
+                <div class="premium-shimmer border border-purple-500/30 rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between shadow-2xl">
+                    <div class="absolute inset-0 bg-black/85 z-0"></div>
+                    
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-purple-400 text-xs font-extrabold tracking-widest uppercase bg-purple-500/20 px-3 py-1 rounded-full">Тариф RePremium</span>
+                            <i class="fa-solid fa-gem text-purple-400 text-xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-black text-white">Бескомпромиссный доступ</h3>
+                        
+                        <ul class="mt-6 space-y-3 text-xs text-gray-200">
+                            <li><i class="fa-solid fa-check text-purple-400 mr-2"></i> Опция «Оригинал» (до 5 вещей в неделю)</li>
+                            <li><i class="fa-solid fa-check text-purple-400 mr-2"></i> До 50 одновременно закрепленных чатов</li>
+                            <li><i class="fa-solid fa-check text-purple-400 mr-2"></i> Возможность удалить чаты навсегда у обоих</li>
+                            <li><i class="fa-solid fa-check text-purple-400 mr-2"></i> Изменение цвета темы на красный или синий</li>
+                            <li><i class="fa-solid fa-check text-purple-400 mr-2"></i> Переливающийся статус в профиле</li>
+                        </ul>
+                    </div>
+
+                    <div class="mt-8 space-y-4 relative z-10">
+                        <select id="premium-select-repremium" class="w-full bg-[#0a0a0c]/80 border border-purple-500/30 rounded-xl px-4 py-3 text-sm text-white">
+                            <option value="repremium-1">1 Месяц — 600 ₽</option>
+                            <option value="repremium-3">3 Месяца — 1500 ₽</option>
+                            <option value="repremium-6">6 Месяцев — 2500 ₽</option>
+                        </select>
+                        <button onclick="purchasePlan('repremium')" class="w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-extrabold rounded-xl transition">
+                            Активировать RePremium
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Промокод -->
+            <div class="bg-[#0e1626] border border-emerald-950/20 rounded-3xl p-6 text-center space-y-4 max-w-lg mx-auto">
+                <h4 class="font-bold text-white text-sm">Активация промокода</h4>
+                <div class="flex gap-2">
+                    <input type="text" id="promo-input" placeholder="Введите полученный промокод..." class="flex-1 bg-[#070b13] border border-emerald-950/20 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm font-mono text-center text-amber-400">
+                    <button onclick="applyPromoCode()" class="px-6 py-3 btn-brand-theme rounded-xl font-bold text-xs transition text-white">Применить</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN: ADMIN PANEL -->
+        <div id="view-admin" class="space-y-6">
+            <h2 class="text-2xl font-extrabold text-white border-b border-gray-800 pb-4"><i class="fa-solid fa-shield-halved mr-2 text-red-500"></i> Панель Модерации Relook</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Очередь аватарок -->
+                <div class="bg-[#0e1626] border border-emerald-950/20 p-4 rounded-2xl space-y-3">
+                    <h3 class="font-bold text-xs text-gray-400 uppercase tracking-wider">Модерация аватарок</h3>
+                    <div id="admin-avatars-list" class="space-y-3 max-h-60 overflow-y-auto">
+                        <!-- Контент -->
+                    </div>
+                </div>
+
+                <!-- Проверка ников -->
+                <div class="bg-[#0e1626] border border-emerald-950/20 p-4 rounded-2xl space-y-3">
+                    <h3 class="font-bold text-xs text-gray-400 uppercase tracking-wider">Проверка ников</h3>
+                    <div id="admin-nicknames-list" class="space-y-3 max-h-60 overflow-y-auto">
+                        <!-- Контент -->
+                    </div>
+                </div>
+
+                <!-- Очередь вещей -->
+                <div class="bg-[#0e1626] border border-emerald-950/20 p-4 rounded-2xl space-y-3">
+                    <h3 class="font-bold text-xs text-gray-400 uppercase tracking-wider">Новые лоты</h3>
+                    <div id="admin-listings-list" class="space-y-3 max-h-60 overflow-y-auto">
+                        <!-- Контент -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- УПРАВЛЕНИЕ -->
+            <div class="bg-[#0e1626] border border-emerald-950/20 p-6 rounded-2xl space-y-6">
+                <h3 class="font-bold text-sm text-white">Управление пользователями и контентом</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Бан по ID -->
+                    <div class="space-y-2">
+                        <label class="block text-xs text-gray-400">UID Пользователя</label>
+                        <input type="text" id="admin-user-id" class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-3 py-2 text-xs text-white" placeholder="ID пользователя">
+                        <div class="flex gap-2">
+                            <button onclick="adminBlockUser(true)" class="flex-1 py-2 bg-red-600 hover:bg-red-700 text-xs font-bold rounded-lg transition text-white">Бан</button>
+                            <button onclick="adminBlockUser(false)" class="flex-1 py-2 bg-green-600 hover:bg-green-700 text-xs font-bold rounded-lg transition text-white">Разбан</button>
+                        </div>
+                    </div>
+
+                    <!-- Ограничение переписки -->
+                    <div class="space-y-2">
+                        <label class="block text-xs text-gray-400">Ограничить активность</label>
+                        <input type="text" id="admin-restrict-id" class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-3 py-2 text-xs text-white" placeholder="ID пользователя">
+                        <div class="flex gap-2">
+                            <button onclick="adminRestrictUser(true)" class="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-xs font-bold rounded-lg transition text-white">Ограничить</button>
+                            <button onclick="adminRestrictUser(false)" class="flex-1 py-2 bg-slate-600 hover:bg-slate-700 text-xs font-bold rounded-lg transition text-white">Снять</button>
+                        </div>
+                    </div>
+
+                    <!-- Предупреждение -->
+                    <div class="space-y-2">
+                        <label class="block text-xs text-gray-400">Отправить варн</label>
+                        <input type="text" id="admin-warn-id" class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-3 py-2 text-xs text-white mb-1" placeholder="ID пользователя">
+                        <input type="text" id="admin-warn-reason" class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-3 py-2 text-xs text-white" placeholder="Причина предупреждения">
+                        <button onclick="adminSendWarning()" class="w-full py-2 bg-orange-600 hover:bg-orange-700 text-xs font-bold rounded-lg transition text-white mt-1">Выслать варн</button>
+                    </div>
+
+                    <!-- Генератор кодов -->
+                    <div class="space-y-2">
+                        <label class="block text-xs text-gray-400">Генератор кодов</label>
+                        <select id="admin-promo-type" class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-3 py-2 text-xs text-white">
+                            <option value="replus-1">RePlus (1 месяц)</option>
+                            <option value="replus-3">RePlus (3 месяца)</option>
+                            <option value="replus-6">RePlus (6 месяцев)</option>
+                            <option value="repremium-1">RePremium (1 месяц)</option>
+                            <option value="repremium-3">RePremium (3 месяца)</option>
+                            <option value="repremium-6">RePremium (6 месяцев)</option>
+                        </select>
+                        <button onclick="adminGeneratePromo()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg transition text-white">Сгенерировать</button>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-gray-800 space-y-2">
+                    <label class="block text-xs text-gray-400">Удаление контента по его ID</label>
+                    <div class="flex gap-2 max-w-xl">
+                        <input type="text" id="admin-target-id" class="flex-1 bg-[#070b13] border border-emerald-950/30 rounded-xl px-3 py-2 text-xs text-white" placeholder="Укажите ID лота или ID отзыва">
+                        <button onclick="adminDeleteListing()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-xs font-bold rounded-lg transition text-white">Удалить Вещь</button>
+                        <button onclick="adminDeleteReview()" class="px-4 py-2 bg-red-900 hover:bg-red-850 text-xs font-bold rounded-lg transition text-white">Удалить Отзыв</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -911,39 +1162,35 @@
             <h2 class="text-2xl font-extrabold text-white">Настройки площадки</h2>
             
             <div class="bg-[#0e1626] border border-emerald-950/20 rounded-2xl p-6 space-y-6">
-                <!-- Тарифы и планы -->
                 <div class="flex items-center justify-between border-b border-gray-800 pb-4">
                     <div>
                         <h4 class="font-bold text-white text-sm">Тарифы и планы подписок</h4>
                         <p class="text-xs text-gray-400 mt-0.5">Информация о возможностях платных тарифов</p>
                     </div>
-                    <button onclick="navigateTo('premium')" class="px-4 py-2 bg-brand-900/40 text-brand-400 text-xs font-bold border border-brand-500/20 rounded-xl hover:bg-brand-800 transition">Посмотреть</button>
+                    <button onclick="navigateTo('premium')" class="px-4 py-2 bg-brand-900/40 text-brand-theme text-xs font-bold border border-brand-500/20 rounded-xl hover:bg-brand-800 transition">Посмотреть</button>
                 </div>
 
-                <!-- Список правил площадки -->
                 <div class="flex items-center justify-between border-b border-gray-800 pb-4">
                     <div>
                         <h4 class="font-bold text-white text-sm">Правила платформы RELOOK</h4>
                         <p class="text-xs text-gray-400 mt-0.5">Права модерации, шкала оценок и гарантии</p>
                     </div>
-                    <button onclick="showRulesPopup()" class="px-4 py-2 bg-[#152035] text-xs font-bold rounded-xl hover:bg-gray-800 transition">Почитать</button>
+                    <button onclick="showRulesPopup()" class="px-4 py-2 bg-[#152035] text-xs font-bold rounded-xl hover:bg-gray-800 transition text-white">Читать</button>
                 </div>
 
-                <!-- Смена цветовой темы (дневная/ночная) -->
                 <div class="flex items-center justify-between border-b border-gray-800 pb-4">
                     <div>
                         <h4 class="font-bold text-white text-sm">Цветовой режим</h4>
                         <p class="text-xs text-gray-400 mt-0.5">Переключение светлой и темной темы интерфейса</p>
                     </div>
-                    <button id="btn-toggle-theme" onclick="toggleTheme()" class="px-4 py-2 bg-[#152035] text-xs font-bold rounded-xl hover:bg-gray-800 transition">
-                        Темная тема
+                    <button id="btn-toggle-theme" onclick="toggleTheme()" class="px-4 py-2 bg-[#152035] text-xs font-bold rounded-xl hover:bg-gray-800 transition text-white">
+                        Переключить
                     </button>
                 </div>
 
-                <!-- Выбор цветового акцента (только для premium) -->
                 <div>
                     <h4 class="font-bold text-white text-sm mb-3">Цветовой акцент Relook</h4>
-                    <p class="text-xs text-gray-400 mb-4">Уникальный визуальный окрас бренда. Доступно только подписчикам <strong class="text-purple-400">repremium</strong></p>
+                    <p class="text-xs text-gray-400 mb-4">Доступно только подписчикам <strong class="text-purple-400 font-bold">repremium</strong></p>
                     
                     <div class="flex gap-4">
                         <button onclick="setBrandColor('green')" class="flex-1 py-3 bg-emerald-950/20 hover:bg-emerald-900 border border-emerald-500/30 rounded-xl font-bold text-xs text-emerald-400 transition">Изумрудный</button>
@@ -954,275 +1201,37 @@
             </div>
         </div>
 
-        <!-- SCREEN: USER PROFILE VIEW (PUBLIC & PRIVATE) -->
-        <div id="view-profile" class="space-y-6">
-            <!-- Верхняя карточка профиля -->
-            <div class="bg-[#0e1626] border border-emerald-950/20 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-                <div class="absolute -top-12 -right-12 w-32 h-32 bg-brand-700/5 rounded-full blur-2xl"></div>
-
-                <div class="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
-                    <!-- Аватарка в круге -->
-                    <div class="relative w-24 h-24 rounded-full overflow-hidden bg-brand-900 border-2 border-brand-500/30 flex items-center justify-center">
-                        <img id="profile-avatar" class="w-full h-full object-cover hidden" src="" alt="Avatar">
-                        <i id="profile-avatar-fallback" class="fa-solid fa-user text-white text-3xl"></i>
-                    </div>
-
-                    <div class="space-y-2">
-                        <div class="flex flex-col md:flex-row items-center gap-3">
-                            <h2 id="profile-nickname" class="text-2xl font-black text-white">...</h2>
-                            <span id="profile-tier-badge" class="px-3 py-1 rounded-full text-xs font-extrabold uppercase">...</span>
-                        </div>
-                        <p id="profile-expire" class="text-[10px] text-gray-400"></p>
-                        <p id="profile-reg-date" class="text-[10px] text-gray-500 font-mono"></p>
-                        <p id="profile-unique-id" class="text-[10px] text-gray-500 font-mono"></p>
-
-                        <!-- Рейтинг пользователя -->
-                        <div class="flex items-center gap-2 pt-1">
-                            <div class="flex text-amber-400 text-sm" id="profile-stars"></div>
-                            <span id="profile-rating-info" class="text-xs text-gray-300 font-bold">5.0 (0 отзывов)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex flex-col gap-3 w-full md:w-auto">
-                    <button id="profile-edit-btn" onclick="openEditProfileModal()" class="px-5 py-3 bg-[#152035] hover:bg-gray-800 rounded-xl font-bold text-xs transition duration-300">
-                        Редактировать профиль
-                    </button>
-                    <button id="profile-reviews-btn" onclick="showUserReviews()" class="px-5 py-3 bg-brand-900/40 text-brand-400 hover:bg-brand-800 border border-brand-500/20 rounded-xl font-bold text-xs transition duration-300">
-                        Посмотреть отзывы
-                    </button>
-                    <button id="profile-upgrade-btn" onclick="navigateTo('premium')" class="px-5 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-extrabold text-xs rounded-xl transition duration-300">
-                        Улучшить тариф RePlus
-                    </button>
-                </div>
-            </div>
-
-            <!-- Сетка активных объявлений продавца -->
-            <div class="space-y-4">
-                <h3 class="text-lg font-bold text-white" id="profile-listings-header">Активные объявления пользователя</h3>
-                <div id="profile-listings-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    <!-- Заполняется динамически -->
-                </div>
-            </div>
-        </div>
-
     </div>
 
-    <div id="premium-templates" class="hidden">
-        
-        <!-- SCREEN: PREMIUM OPTIONS -->
-        <div id="view-premium" class="max-w-4xl mx-auto space-y-8">
-            <div class="text-center space-y-2">
-                <h2 class="text-3xl font-extrabold text-white">Премиум-тарифы RELOOK</h2>
-                <p class="text-sm text-gray-400 max-w-md mx-auto">Откройте неограниченные продажи, эксклюзивные темы оформления и золотой статус в комьюнити.</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                
-                <!-- Карта RePlus -->
-                <div class="bg-gradient-to-b from-[#1b1c1e] to-[#0d0f11] border border-amber-500/20 rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl">
-                    <div class="absolute -top-12 -right-12 w-24 h-24 bg-amber-500/5 rounded-full blur-xl"></div>
-                    <div>
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-amber-400 text-xs font-extrabold tracking-widest uppercase bg-amber-500/10 px-3 py-1 rounded-full">Тариф RePlus</span>
-                            <i class="fa-solid fa-star text-amber-400 text-xl"></i>
-                        </div>
-                        <h3 class="text-2xl font-black text-white">Золотой Продавец</h3>
-                        <p class="text-xs text-gray-400 mt-2">Идеально для активного ресейла.</p>
-                        
-                        <ul class="mt-6 space-y-3 text-xs text-gray-300">
-                            <li><i class="fa-solid fa-check text-amber-400 mr-2"></i> Опция «Оригинал» на 2 вещи в месяц</li>
-                            <li><i class="fa-solid fa-check text-amber-400 mr-2"></i> До 8 закрепленных чатов</li>
-                            <li><i class="fa-solid fa-check text-amber-400 mr-2"></i> Модерация ников и аватарок</li>
-                            <li><i class="fa-solid fa-check text-amber-400 mr-2"></i> Опция блокировки нарушителей в чатах</li>
-                        </ul>
-                    </div>
-
-                    <div class="mt-8 space-y-4">
-                        <select id="premium-select-replus" class="w-full bg-[#0a0a0c] border border-amber-500/30 rounded-xl px-4 py-3 text-sm text-white">
-                            <option value="replus-1">1 Месяц — 200 ₽</option>
-                            <option value="replus-3">3 Месяца — 550 ₽</option>
-                            <option value="replus-6">6 Месяцев — 1000 ₽</option>
-                        </select>
-                        <button onclick="purchasePlan('replus')" class="w-full py-4 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-black font-extrabold rounded-xl transition shadow-lg">
-                            Активировать RePlus
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Карта RePremium -->
-                <div class="premium-shimmer border border-purple-500/30 rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between shadow-2xl">
-                    <div class="absolute inset-0 bg-black/80 backdrop-blur-[2px] z-0"></div>
-                    
-                    <div class="relative z-10">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-purple-400 text-xs font-extrabold tracking-widest uppercase bg-purple-500/20 px-3 py-1 rounded-full">Тариф RePremium</span>
-                            <i class="fa-solid fa-gem text-purple-400 text-xl animate-bounce"></i>
-                        </div>
-                        <h3 class="text-2xl font-black text-white">Максимальный Доступ</h3>
-                        <p class="text-xs text-gray-300 mt-2">Для профессиональных коллекционеров и брендов.</p>
-                        
-                        <ul class="mt-6 space-y-3 text-xs text-gray-200">
-                            <li><i class="fa-solid fa-check text-purple-400 mr-2"></i> Полный «Оригинал» на 5 вещей в неделю</li>
-                            <li><i class="fa-solid fa-check text-purple-400 mr-2"></i> До 50 закрепленных чатов</li>
-                            <li><i class="fa-solid fa-check text-purple-400 mr-2"></i> Неограниченное удаление чатов у всех</li>
-                            <li><i class="fa-solid fa-check text-purple-400 mr-2"></i> Возможность полной смены темы дизайна</li>
-                            <li><i class="fa-solid fa-check text-purple-400 mr-2"></i> Приоритетная поддержка и индиго-ник</li>
-                        </ul>
-                    </div>
-
-                    <div class="mt-8 space-y-4 relative z-10">
-                        <select id="premium-select-repremium" class="w-full bg-[#0a0a0c]/80 border border-purple-500/30 rounded-xl px-4 py-3 text-sm text-white">
-                            <option value="repremium-1">1 Месяц — 600 ₽</option>
-                            <option value="repremium-3">3 Месяца — 1500 ₽</option>
-                            <option value="repremium-6">6 Месяцев — 2500 ₽</option>
-                        </select>
-                        <button onclick="purchasePlan('repremium')" class="w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-extrabold rounded-xl transition shadow-lg shadow-purple-900/40">
-                            Активировать RePremium
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- ВВОД ПРОМОКОДА -->
-            <div class="bg-[#0e1626] border border-emerald-950/20 rounded-3xl p-6 text-center space-y-4 max-w-lg mx-auto">
-                <h4 class="font-bold text-white text-sm">Есть специальный промокод?</h4>
-                <p class="text-xs text-gray-400">Введите буквенный код для моментальной активации подписки.</p>
-                <div class="flex gap-2">
-                    <input type="text" id="promo-input" placeholder="RELOOK-XXXX-XXXX" class="flex-1 bg-[#070b13] border border-emerald-950/20 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm font-mono text-center text-amber-400">
-                    <button onclick="applyPromoCode()" class="px-6 py-3 bg-brand-700 hover:bg-brand-600 rounded-xl font-bold text-xs transition">Активировать</button>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <div id="admin-templates" class="hidden">
-        
-        <!-- SCREEN: ADMIN CONTROL PANEL -->
-        <div id="view-admin" class="space-y-6">
-            <h2 class="text-2xl font-extrabold text-white border-b border-gray-800 pb-4"><i class="fa-solid fa-shield-halved mr-2 text-red-500"></i> Панель Модерации Relook</h2>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Очередь аватарок на проверку -->
-                <div class="bg-[#0e1626] border border-emerald-950/20 p-4 rounded-2xl space-y-3">
-                    <h3 class="font-bold text-xs text-gray-400 uppercase tracking-wider">Модерация аватарок</h3>
-                    <div id="admin-avatars-list" class="space-y-3 max-h-60 overflow-y-auto">
-                        <!-- Сюда прилетают аватарки -->
-                    </div>
-                </div>
-
-                <!-- Проверка ников -->
-                <div class="bg-[#0e1626] border border-emerald-950/20 p-4 rounded-2xl space-y-3">
-                    <h3 class="font-bold text-xs text-gray-400 uppercase tracking-wider">Проверка никнеймов</h3>
-                    <div id="admin-nicknames-list" class="space-y-3 max-h-60 overflow-y-auto">
-                        <!-- Проверка никнеймов -->
-                    </div>
-                </div>
-
-                <!-- Объявления на одобрение -->
-                <div class="bg-[#0e1626] border border-emerald-950/20 p-4 rounded-2xl space-y-3">
-                    <h3 class="font-bold text-xs text-gray-400 uppercase tracking-wider">Очередь новых вещей</h3>
-                    <div id="admin-listings-list" class="space-y-3 max-h-60 overflow-y-auto">
-                        <!-- Вещи на проверку -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ И ОБЪЯВЛЕНИЯМИ ПО ID -->
-            <div class="bg-[#0e1626] border border-emerald-950/20 p-6 rounded-2xl space-y-6">
-                <h3 class="font-bold text-sm text-white">Инструменты быстрого управления</h3>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <!-- Заблокировать/Разблокировать пользователя -->
-                    <div class="space-y-2">
-                        <label class="block text-xs text-gray-400">UID Пользователя</label>
-                        <input type="text" id="admin-user-id" class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-3 py-2 text-xs" placeholder="uid-пользователя">
-                        <div class="flex gap-2">
-                            <button onclick="adminBlockUser(true)" class="flex-1 py-2 bg-red-600 hover:bg-red-700 text-xs font-bold rounded-lg transition text-white">Бан</button>
-                            <button onclick="adminBlockUser(false)" class="flex-1 py-2 bg-green-600 hover:bg-green-700 text-xs font-bold rounded-lg transition text-white">Разбан</button>
-                        </div>
-                    </div>
-
-                    <!-- Ограничить/Снять ограничения (Варны, подача) -->
-                    <div class="space-y-2">
-                        <label class="block text-xs text-gray-400">Ограничить активность</label>
-                        <input type="text" id="admin-restrict-id" class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-3 py-2 text-xs" placeholder="uid-пользователя">
-                        <div class="flex gap-2">
-                            <button onclick="adminRestrictUser(true)" class="flex-1 py-2 bg-amber-600 hover:bg-amber-700 text-xs font-bold rounded-lg transition text-white">Ограничить</button>
-                            <button onclick="adminRestrictUser(false)" class="flex-1 py-2 bg-slate-600 hover:bg-slate-700 text-xs font-bold rounded-lg transition text-white">Снять</button>
-                        </div>
-                    </div>
-
-                    <!-- Отправить предупреждение (Warning Popup) -->
-                    <div class="space-y-2">
-                        <label class="block text-xs text-gray-400">Предупреждение (Варн)</label>
-                        <input type="text" id="admin-warn-id" class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-3 py-2 text-xs mb-1" placeholder="uid-пользователя">
-                        <input type="text" id="admin-warn-reason" class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-3 py-2 text-xs" placeholder="Причина предупреждения">
-                        <button onclick="adminSendWarning()" class="w-full py-2 bg-orange-600 hover:bg-orange-700 text-xs font-bold rounded-lg transition text-white">Отправить варн</button>
-                    </div>
-
-                    <!-- Генератор промокодов -->
-                    <div class="space-y-2">
-                        <label class="block text-xs text-gray-400">Генератор промокодов</label>
-                        <select id="admin-promo-type" class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-3 py-2 text-xs">
-                            <option value="replus-1">RePlus (1 месяц)</option>
-                            <option value="replus-3">RePlus (3 месяца)</option>
-                            <option value="replus-6">RePlus (6 месяцев)</option>
-                            <option value="repremium-1">RePremium (1 месяц)</option>
-                            <option value="repremium-3">RePremium (3 месяца)</option>
-                            <option value="repremium-6">RePremium (6 месяцев)</option>
-                        </select>
-                        <button onclick="adminGeneratePromo()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-xs font-bold rounded-lg transition text-white">Создать код</button>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-800">
-                    <!-- Удалить отзыв или объявление по ID -->
-                    <div class="space-y-2">
-                        <label class="block text-xs text-gray-400">Быстрое удаление контента</label>
-                        <div class="flex gap-2">
-                            <input type="text" id="admin-target-id" class="flex-1 bg-[#070b13] border border-emerald-950/30 rounded-xl px-3 py-2 text-xs" placeholder="ID объявления или отзыва">
-                            <button onclick="adminDeleteListing()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-xs font-bold rounded-lg transition text-white">Удалить Вещь</button>
-                            <button onclick="adminDeleteReview()" class="px-4 py-2 bg-red-900 hover:bg-red-850 text-xs font-bold rounded-lg transition text-white">Удалить Отзыв</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- WIZARD/POPUP DIALOGS -->
+    <!-- DIALOG POPUPS -->
     <div id="modal-backdrop" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         
-        <!-- DIALOG: CREATE/EDIT LISTING -->
+        <!-- DIALOG: LISTING CREATION / EDIT WIZARD -->
         <div id="modal-listing-wizard" class="hidden w-full max-w-lg bg-[#0e1626] border border-emerald-950/30 rounded-3xl p-6 md:p-8 space-y-6 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-gray-800 pb-4">
-                <h3 id="wizard-title" class="text-xl font-bold text-white">Выставить вещь на продажу</h3>
+                <h3 id="wizard-title" class="text-xl font-bold text-white">Выставить вещь на Relook</h3>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
 
-            <!-- Шаги мастера объявлений -->
             <form id="wizard-form" onsubmit="handleSaveListing(event)" class="space-y-4 text-xs">
+                <input type="hidden" id="wiz-listing-id">
                 <div>
                     <label class="block font-semibold text-gray-400 mb-2">Название товара</label>
-                    <input type="text" id="wiz-title" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Balenciaga Triple S">
+                    <input type="text" id="wiz-title" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Название бренда, коллекция...">
                 </div>
                 <div>
-                    <label class="block font-semibold text-gray-400 mb-2">Фотографии (минимум 3 реальных фото вставив ссылки или загрузив)</label>
+                    <label class="block font-semibold text-gray-400 mb-2">Фотографии (вставьте 3 ссылки на реальные изображения)</label>
                     <div class="space-y-2">
-                        <input type="text" id="wiz-img-1" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Ссылка на фото 1">
-                        <input type="text" id="wiz-img-2" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Ссылка на фото 2">
-                        <input type="text" id="wiz-img-3" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Ссылка на фото 3">
+                        <input type="text" id="wiz-img-1" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Ссылка на фото №1">
+                        <input type="text" id="wiz-img-2" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Ссылка на фото №2">
+                        <input type="text" id="wiz-img-3" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Ссылка на фото №3">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block font-semibold text-gray-400 mb-2">Состояние вещи</label>
                         <select id="wiz-condition" class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white">
-                            <option value="NWT">Новое с биркой (NWT)</option>
+                            <option value="NWT">NWT (Новое с биркой)</option>
                             <option value="Отличное">Отличное</option>
                             <option value="Хорошее">Хорошее</option>
                             <option value="Удовлетворительное">Удовлетворительное</option>
@@ -1230,38 +1239,38 @@
                     </div>
                     <div>
                         <label class="block font-semibold text-gray-400 mb-2">Цвет</label>
-                        <input type="text" id="wiz-color" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Черный">
+                        <input type="text" id="wiz-color" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Например: Черный">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block font-semibold text-gray-400 mb-2">Цена (руб.)</label>
-                        <input type="number" id="wiz-price" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="45000">
+                        <label class="block font-semibold text-gray-400 mb-2">Цена (₽)</label>
+                        <input type="number" id="wiz-price" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Например: 25000">
                     </div>
                     <div>
-                        <label class="block font-semibold text-gray-400 mb-2">Размер / Сетка</label>
-                        <input type="text" id="wiz-size" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="42 EU / L">
+                        <label class="block font-semibold text-gray-400 mb-2">Размер</label>
+                        <input type="text" id="wiz-size" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="M / 42 EU">
                     </div>
                 </div>
                 <div>
                     <label class="block font-semibold text-gray-400 mb-2">Описание дефектов и деталей</label>
-                    <textarea id="wiz-desc" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white h-24" placeholder="Опишите швы, нюансы использования..."></textarea>
+                    <textarea id="wiz-desc" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white h-24" placeholder="Опишите швы, нюансы использования, дефекты..."></textarea>
                 </div>
                 <div>
                     <label class="block font-semibold text-gray-400 mb-2">Город отправки</label>
-                    <input type="text" id="wiz-city" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Москва">
+                    <input type="text" id="wiz-city" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Например: Москва">
                 </div>
 
-                <!-- Галочка «Оригинал» с проверкой подписки -->
+                <!-- Галочка «Оригинал» -->
                 <div class="flex items-center gap-3 bg-[#070b13] p-4 rounded-xl border border-emerald-950/30">
                     <input type="checkbox" id="wiz-original" class="w-4 h-4 rounded text-brand-600 focus:ring-brand-500">
                     <div>
-                        <label for="wiz-original" class="font-bold text-white block">Это оригинальный брендовый товар</label>
-                        <span class="text-[10px] text-gray-400">Галочка доступна только на тарифах RePlus и RePremium.</span>
+                        <label for="wiz-original" class="font-bold text-white block">Это оригинальный товар</label>
+                        <span class="text-[10px] text-gray-400">Доступно только подписчикам RePlus (2 в месяц) или RePremium (5 в неделю)</span>
                     </div>
                 </div>
 
-                <button type="submit" class="w-full py-4 bg-brand-700 hover:bg-brand-600 text-white font-bold rounded-xl transition">
+                <button type="submit" class="w-full py-4 btn-brand-theme text-white font-bold rounded-xl transition">
                     Отправить на модерацию
                 </button>
             </form>
@@ -1284,7 +1293,7 @@
                     <input type="text" id="edit-profile-avatar-url" class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="https://example.com/avatar.jpg">
                     <p class="text-[10px] text-amber-500 mt-1"><i class="fa-solid fa-circle-exclamation mr-1"></i> Смена аватарки доступна только подписчикам RePlus или RePremium.</p>
                 </div>
-                <button onclick="saveProfileChanges()" class="w-full py-4 bg-brand-700 hover:bg-brand-600 text-white font-bold rounded-xl transition">
+                <button onclick="saveProfileChanges()" class="w-full py-4 btn-brand-theme text-white font-bold rounded-xl transition">
                     Отправить изменения на проверку
                 </button>
             </div>
@@ -1325,7 +1334,7 @@
             </div>
         </div>
 
-        <!-- DIALOG: REPORT MESSAGE COMPLAINT -->
+        <!-- DIALOG: COMPLAINT -->
         <div id="modal-complaint" class="hidden w-full max-w-md bg-[#0e1626] border border-emerald-950/30 rounded-3xl p-6 space-y-6">
             <div class="flex items-center justify-between border-b border-gray-800 pb-4">
                 <h3 class="text-lg font-bold text-red-400">Подать жалобу модераторам</h3>
@@ -1334,11 +1343,11 @@
 
             <div class="space-y-4 text-xs">
                 <div>
-                    <label class="block font-semibold text-gray-400 mb-2">Уникальный ID сообщения с нарушениями</label>
-                    <input type="text" id="complaint-msg-id" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Введите ID сообщения">
+                    <label class="block font-semibold text-gray-400 mb-2">ID сообщения с нарушениями</label>
+                    <input type="text" id="complaint-msg-id" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white" placeholder="Укажите ID сообщения">
                 </div>
                 <div>
-                    <label class="block font-semibold text-gray-400 mb-2">Описание проблемы (мошенничество, увод в тг, фейк фото)</label>
+                    <label class="block font-semibold text-gray-400 mb-2">Описание проблемы (мошенничество, увод за чат площадки, фейк фото)</label>
                     <textarea id="complaint-text" required class="w-full bg-[#070b13] border border-emerald-950/30 rounded-xl px-4 py-3 text-white h-24" placeholder="Продавец настаивает на оплате за контуром чата..."></textarea>
                 </div>
                 <button onclick="submitComplaint()" class="w-full py-4 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl transition">
@@ -1347,9 +1356,17 @@
             </div>
         </div>
 
-        <!-- DIALOG: RULES TEXT FULL -->
-        <div id="modal-rules-full" class="hidden w-full max-w-xl bg-[#0e1626] border border-emerald-950/30 rounded-3xl p-6 space-y-6 max-h-[80vh] overflow-y-auto text-xs">
-            <!-- Правила площадки будут инжектированы здесь при вызове -->
+        <!-- DIALOG: RULES (FULL) -->
+        <div id="modal-rules-full" class="hidden w-full max-w-xl bg-[#0e1626] border border-emerald-950/30 rounded-3xl p-6 space-y-6 max-h-[80vh] overflow-y-auto text-xs text-white">
+            <h3 class="text-lg font-bold border-b border-gray-800 pb-3 text-center">Правила и условия Relook</h3>
+            <div class="space-y-4 leading-relaxed font-sans text-gray-300">
+                <p><strong>1. Особые права модерации и жесткий контроль</strong><br>Администрация оставляет за собой право блокировать нарушителей без предупреждения, контролировать диалоги и скрывать сомнительный контент.</p>
+                <p><strong>2. Запрет на переход в сторонние мессенджеры</strong><br>Все обсуждения сделок, условий и реквизитов доставки строго закрыты в контуре встроенного чата. Перевод на Telegram/WhatsApp карается мгновенным баном.</p>
+                <p><strong>3. Общие положения</strong><br>Сервис является исключительно техническим посредником и не гарантирует 100% честность сделок.</p>
+                <p><strong>4. Требования к фотографиям</strong><br>Минимум 3 "живых" фотографии с дефектами крупным планом, швами и бирками аутентичности.</p>
+                <p><strong>5. Программа защиты (Гарантия до 80%)</strong><br>Площадка компенсирует потери при мошенничестве при наличии талона из полиции и видеозаписи вскрытия посылки.</p>
+            </div>
+            <button onclick="closeModal()" class="w-full py-3 bg-[#152035] text-xs font-bold rounded-xl hover:bg-gray-800 transition">Закрыть</button>
         </div>
 
     </div>
@@ -1358,8 +1375,9 @@
         // Механизм навигации по вкладкам
         function navigateTo(viewId) {
             state.currentView = viewId;
+            state.isSupportChat = (viewId === 'support');
             
-            // Сброс активного класса в боковом и нижнем меню
+            // Сброс активного класса в меню
             document.querySelectorAll('.nav-item').forEach(item => {
                 if (item.getAttribute('data-view') === viewId) {
                     item.className = "nav-item w-full flex items-center gap-4 px-4 py-3 rounded-xl bg-brand-800/30 border-l-4 border-brand-500 text-white text-left font-semibold transition-all";
@@ -1370,13 +1388,12 @@
 
             document.querySelectorAll('.mobile-nav').forEach(item => {
                 if (item.getAttribute('data-view') === viewId) {
-                    item.className = "mobile-nav flex flex-col items-center gap-1 text-brand-400";
+                    item.className = "mobile-nav flex flex-col items-center gap-1 text-brand-theme";
                 } else {
                     item.className = "mobile-nav flex flex-col items-center gap-1 text-gray-400";
                 }
             });
 
-            // Рендер страницы
             const viewPort = document.getElementById('view-port');
             viewPort.innerHTML = '';
 
@@ -1392,12 +1409,10 @@
 
             if (contentSource) {
                 viewPort.appendChild(contentSource.cloneNode(true));
-                // Инициализация специфических скриптов для вкладки
                 onViewLoaded(viewId);
             }
         }
 
-        // Вызов после загрузки конкретной вкладки в DOM
         function onViewLoaded(viewId) {
             if (viewId === 'home') {
                 renderHomeListings();
@@ -1412,29 +1427,31 @@
             }
         }
 
-        // Ограничение админ панели
         function checkAdminPrivileges() {
             if (state.profile && state.profile.isAdmin) {
                 document.getElementById('admin-sidebar-btn').classList.remove('hidden');
                 document.getElementById('admin-mobile-btn').classList.remove('hidden');
+            } else {
+                document.getElementById('admin-sidebar-btn').classList.add('hidden');
+                document.getElementById('admin-mobile-btn').classList.add('hidden');
             }
         }
 
-        // Общие загрузки из БД при входе
+        // Общие загрузки из БД
         function loadData() {
             checkAdminPrivileges();
             
-            // Включаем реального слушателя объявлений в Firebase
-            const listingsQuery = query(
-                collection(window.db, 'artifacts', window.appId, 'public', 'data', 'listings')
+            const listingsQuery = window.query(
+                window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'listings')
             );
 
-            onSnapshot(listingsQuery, (snapshot) => {
+            window.onSnapshot(listingsQuery, (snapshot) => {
                 state.listings = [];
-                snapshot.forEach(doc => {
-                    state.listings.push({ id: doc.id, ...doc.data() });
+                snapshot.forEach(docSnap => {
+                    state.listings.push({ id: docSnap.id, ...docSnap.data() });
                 });
                 if (state.currentView === 'home') renderHomeListings();
+                if (state.currentView === 'my-listings') renderMyListings();
             }, (error) => {
                 console.error("Query listings failed:", error);
             });
@@ -1442,7 +1459,6 @@
             navigateTo('home');
         }
 
-        // Разлогин
         async function handleLogout() {
             try {
                 await window.signOut(window.auth);
@@ -1454,14 +1470,14 @@
     </script>
 
     <script>
-        // Поиск по объявлениям на клиенте (Rule 2)
+        // Поиск
         function searchListings(val) {
-            const query = val.toLowerCase().trim();
+            const queryVal = val.toLowerCase().trim();
             const filtered = state.listings.filter(item => 
                 item.status === 'active' && 
-                (item.title.toLowerCase().includes(query) || 
-                 item.description.toLowerCase().includes(query) ||
-                 item.color.toLowerCase().includes(query))
+                (item.title.toLowerCase().includes(queryVal) || 
+                 item.description.toLowerCase().includes(queryVal) ||
+                 item.color.toLowerCase().includes(queryVal))
             );
             renderListingsToGrid(filtered);
         }
@@ -1504,7 +1520,7 @@
                         <span class="text-[10px] text-gray-400 block">${item.city}</span>
                         <h4 class="font-bold text-xs text-white truncate">${item.title}</h4>
                         <div class="flex items-center justify-between pt-1">
-                            <span class="text-xs font-black text-brand-400">${item.price.toLocaleString()} ₽</span>
+                            <span class="text-xs font-black text-brand-theme">${item.price.toLocaleString()} ₽</span>
                             <span class="text-[9px] bg-emerald-950/50 text-emerald-300 border border-emerald-950 px-2 py-0.5 rounded">${item.condition}</span>
                         </div>
                     </div>
@@ -1513,7 +1529,7 @@
             });
         }
 
-        // Переход во внутреннее объявление продавца
+        // Подробный вид товара
         async function viewListingDetail(id) {
             const item = state.listings.find(x => x.id === id);
             if (!item) return;
@@ -1521,7 +1537,6 @@
             state.selectedListing = item;
             navigateTo('listing-detail');
 
-            // Заполняем подробный вид
             document.getElementById('detail-title').innerText = item.title;
             document.getElementById('detail-price').innerText = `${item.price.toLocaleString()} ₽`;
             document.getElementById('detail-condition').innerText = item.condition;
@@ -1531,7 +1546,6 @@
             document.getElementById('detail-desc').innerText = item.description;
             document.getElementById('detail-id-badge').innerText = `ОБЪЯВЛЕНИЕ ID: ${item.id}`;
             
-            // Настройка главного изображения
             const mainImg = document.getElementById('detail-main-img');
             mainImg.src = item.images[0] || 'https://placehold.co/600x600/064e3b/ffffff?text=No+Photo';
             
@@ -1541,7 +1555,6 @@
                 document.getElementById('detail-badge-original').classList.add('hidden');
             }
 
-            // Добавление миниатюр
             const thumbsContainer = document.getElementById('detail-thumbnails');
             thumbsContainer.innerHTML = '';
             item.images.forEach(imgUrl => {
@@ -1554,13 +1567,21 @@
                 thumbsContainer.appendChild(thumb);
             });
 
-            // Настройка профиля продавца
-            const sellerRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', item.sellerId);
-            const sellerSnap = await getDoc(sellerRef);
+            const sellerRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', item.sellerId);
+            const sellerSnap = await window.getDoc(sellerRef);
             if (sellerSnap.exists()) {
                 const seller = sellerSnap.data();
                 state.selectedUser = seller;
-                document.getElementById('seller-nickname').innerText = seller.nickname;
+                
+                // Ник продавца
+                const nickEl = document.getElementById('seller-nickname');
+                if (seller.status === 'banned') {
+                    nickEl.innerHTML = `<span class="text-red-500 font-bold"><i class="fa-solid fa-ban"></i> АККАУНТ ЗАБЛОКИРОВАН</span>`;
+                } else if (seller.status === 'restricted') {
+                    nickEl.innerHTML = `${seller.nickname} <span class="text-amber-500 text-xs ml-1" title="Аккаунт ограничен"><i class="fa-solid fa-triangle-exclamation"></i></span>`;
+                } else {
+                    nickEl.innerText = seller.nickname;
+                }
                 
                 const sellerAvatar = document.getElementById('seller-avatar');
                 const sellerFallback = document.getElementById('seller-avatar-fallback');
@@ -1573,22 +1594,20 @@
                     sellerFallback.classList.remove('hidden');
                 }
 
-                // Рендер рейтинга продавца
                 const starsContainer = document.getElementById('seller-stars');
                 starsContainer.innerHTML = '';
-                const fullStars = Math.floor(seller.rating || 5);
+                const rating = seller.rating || 5.0;
+                const fullStars = Math.floor(rating);
                 for (let i = 0; i < 5; i++) {
                     const star = document.createElement('i');
-                    star.className = i < fullStars ? "fa-solid fa-star" : "fa-regular fa-star";
+                    star.className = i < fullStars ? "fa-solid fa-star" : "fa-regular fa-star text-gray-500";
                     starsContainer.appendChild(star);
                 }
-                document.getElementById('seller-rating-count').innerText = `${seller.rating?.toFixed(1) || '5.0'} (${seller.reviewsCount || 0} отзывов)`;
+                document.getElementById('seller-rating-count').innerText = `${rating.toFixed(2)} (${seller.reviewsCount || 0} отзывов)`;
                 
-                // Клик по профилю продавца
                 document.getElementById('seller-profile-clickable').onclick = () => viewPublicProfile(seller.uid);
             }
 
-            // Прячем кнопку написать самому себе
             if (item.sellerId === state.user.uid) {
                 document.getElementById('btn-write-seller').classList.add('hidden');
             } else {
@@ -1598,11 +1617,11 @@
     </script>
 
     <script>
-        // Инициация чата из объявления
+        // Инициализация чата
         async function initiateChat() {
             if (!state.selectedListing || !state.selectedUser) return;
             if (state.profile.status === 'restricted') {
-                showToast("Ваш аккаунт ограничен модерацией. Вы не можете отправлять сообщения.", "error");
+                showToast("Ваш аккаунт ограничен модерацией. Общение в чатах запрещено.", "error");
                 return;
             }
 
@@ -1611,9 +1630,8 @@
             const listingId = state.selectedListing.id;
             const chatId = `${buyerId}_${sellerId}_${listingId}`;
 
-            // Создаем или получаем документ чата в Firestore
-            const chatRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', chatId);
-            const chatSnap = await getDoc(chatRef);
+            const chatRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', chatId);
+            const chatSnap = await window.getDoc(chatRef);
 
             if (!chatSnap.exists()) {
                 const chatData = {
@@ -1621,15 +1639,14 @@
                     buyerId: buyerId,
                     sellerId: sellerId,
                     listingId: listingId,
-                    pinned: [], // массив ID пользователей, закрепивших чат
-                    blocked: [], // массив ID пользователей, которых заблокировали в этом чате
+                    pinned: [],
+                    blocked: [],
                     messages: [],
                     lastMessageTime: new Date().toISOString()
                 };
-                await setDoc(chatRef, chatData);
+                await window.setDoc(chatRef, chatData);
             }
 
-            // Открываем вкладку чата
             state.activeChatId = chatId;
             navigateTo('chat');
             listenToChat(chatId);
@@ -1640,23 +1657,28 @@
         function listenToChat(chatId) {
             if (chatUnsubscribe) chatUnsubscribe();
 
-            const chatRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', chatId);
+            const chatRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', chatId);
             
-            chatUnsubscribe = onSnapshot(chatRef, async (docSnap) => {
+            chatUnsubscribe = window.onSnapshot(chatRef, async (docSnap) => {
                 if (!docSnap.exists()) return;
                 const chat = docSnap.data();
                 
-                // Рендерим заголовок и информацию
                 const partnerId = state.user.uid === chat.buyerId ? chat.sellerId : chat.buyerId;
-                
-                // Подгружаем профиль партнера
-                const partnerRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', partnerId);
-                const partnerSnap = await getDoc(partnerRef);
+                const partnerRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', partnerId);
+                const partnerSnap = await window.getDoc(partnerRef);
                 
                 if (partnerSnap.exists()) {
                     const partner = partnerSnap.data();
                     
-                    document.getElementById('chat-partner-nickname').innerText = partner.nickname;
+                    const partnerNickEl = document.getElementById('chat-partner-nickname');
+                    if (partner.status === 'banned') {
+                        partnerNickEl.innerHTML = `<span class="text-red-500 font-bold"><i class="fa-solid fa-ban"></i> АККАУНТ ЗАБЛОКИРОВАН</span>`;
+                    } else if (partner.status === 'restricted') {
+                        partnerNickEl.innerHTML = `${partner.nickname} <span class="text-amber-500 text-xs ml-1"><i class="fa-solid fa-triangle-exclamation"></i></span>`;
+                    } else {
+                        partnerNickEl.innerText = partner.nickname;
+                    }
+
                     const pAvatar = document.getElementById('chat-partner-avatar');
                     const pFallback = document.getElementById('chat-partner-fallback');
                     
@@ -1669,13 +1691,11 @@
                         pFallback.classList.remove('hidden');
                     }
 
-                    // Онлайн статус (симуляция)
                     const statusDot = document.getElementById('chat-partner-status-dot');
                     const statusText = document.getElementById('chat-partner-status-text');
                     if (partner.status === 'banned') {
                         statusDot.className = "absolute bottom-0 right-0 w-3 h-3 rounded-full bg-red-600 border-2 border-[#0e1626]";
-                        statusText.innerText = "Аккаунт заблокирован";
-                        document.getElementById('chat-partner-nickname').innerText = "Аккаунт заблокирован";
+                        statusText.innerText = "Заблокирован";
                     } else {
                         statusDot.className = "absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-[#0e1626]";
                         statusText.innerText = "В сети";
@@ -1684,7 +1704,6 @@
                     document.getElementById('chat-partner-profile-clickable').onclick = () => viewPublicProfile(partner.uid);
                 }
 
-                // Индикатор товара в чате
                 const item = state.listings.find(x => x.id === chat.listingId);
                 if (item) {
                     document.getElementById('chat-listing-img').src = item.images[0] || '';
@@ -1692,22 +1711,20 @@
                     document.getElementById('chat-listing-price').innerText = `${item.price.toLocaleString()} ₽`;
                 }
 
-                // Настройки выпадающего меню (Блокировка, закрепление)
                 const isPinned = chat.pinned && chat.pinned.includes(state.user.uid);
                 document.getElementById('chat-pin-text').innerText = isPinned ? "Открепить чат" : "Закрепить чат";
 
                 const isBlocked = chat.blocked && chat.blocked.includes(partnerId);
                 document.getElementById('chat-block-text').innerText = isBlocked ? "Разблокировать" : "Заблокировать";
 
-                // Условия оценки сделки (сообщений > 5)
+                // Оценка сделки (если сообщений > 30)
                 const evalBtn = document.getElementById('btn-rate-deal');
-                if (chat.messages.length >= 5) {
+                if (chat.messages && chat.messages.length >= 30) {
                     evalBtn.classList.remove('hidden');
                 } else {
                     evalBtn.classList.add('hidden');
                 }
 
-                // Рендер списка сообщений
                 const msgArea = document.getElementById('chat-messages-area');
                 msgArea.innerHTML = '';
 
@@ -1724,7 +1741,6 @@
                     msgArea.appendChild(bubble);
                 });
 
-                // Скролл вниз
                 msgArea.scrollTop = msgArea.scrollHeight;
 
             }, (error) => {
@@ -1732,7 +1748,6 @@
             });
         }
 
-        // Отправка сообщений в чат
         async function sendChatMessage(e) {
             e.preventDefault();
             const input = document.getElementById('chat-msg-input');
@@ -1740,19 +1755,18 @@
             if (!text || !state.activeChatId) return;
 
             if (state.profile.status === 'restricted') {
-                showToast("Ваш аккаунт ограничен модерацией. Вы не можете отправлять сообщения.", "error");
+                showToast("Ваш аккаунт ограничен модерацией. Отправка сообщений запрещена.", "error");
                 return;
             }
 
             try {
-                const chatRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', state.activeChatId);
-                const chatSnap = await getDoc(chatRef);
+                const chatRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', state.activeChatId);
+                const chatSnap = await window.getDoc(chatRef);
                 const chat = chatSnap.data();
 
-                // Проверка блокировок
                 const partnerId = state.user.uid === chat.buyerId ? chat.sellerId : chat.buyerId;
                 if (chat.blocked && (chat.blocked.includes(state.user.uid) || chat.blocked.includes(partnerId))) {
-                    showToast("Один из пользователей заблокировал этот чат.", "error");
+                    showToast("Один из пользователей заблокировал общение.", "error");
                     return;
                 }
 
@@ -1764,8 +1778,8 @@
                     timestamp: new Date().toISOString()
                 };
 
-                await updateDoc(chatRef, {
-                    messages: arrayUnion(msgObj),
+                await window.updateDoc(chatRef, {
+                    messages: window.arrayUnion(msgObj),
                     lastMessageTime: new Date().toISOString()
                 });
 
@@ -1775,21 +1789,19 @@
             }
         }
 
-        // Закрепить чат (Enforce Sub limits)
         async function togglePinChat() {
             if (!state.activeChatId) return;
             const tier = state.profile.tier;
             const limit = tier === 'free' ? 1 : tier === 'replus' ? 8 : 50;
 
-            const chatRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', state.activeChatId);
-            const chatSnap = await getDoc(chatRef);
+            const chatRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', state.activeChatId);
+            const chatSnap = await window.getDoc(chatRef);
             const chat = chatSnap.data();
 
             const alreadyPinned = chat.pinned && chat.pinned.includes(state.user.uid);
 
             if (!alreadyPinned) {
-                // Проверяем текущее количество закрепленных чатов
-                const allChatsSnap = await getDocs(collection(window.db, 'artifacts', window.appId, 'public', 'data', 'chats'));
+                const allChatsSnap = await window.getDocs(window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'chats'));
                 let pinCount = 0;
                 allChatsSnap.forEach(d => {
                     const c = d.data();
@@ -1801,19 +1813,19 @@
                     return;
                 }
 
-                await updateDoc(chatRef, {
-                    pinned: arrayUnion(state.user.uid)
+                await window.updateDoc(chatRef, {
+                    pinned: window.arrayUnion(state.user.uid)
                 });
-                showToast("Чат закреплен!");
+                showToast("Чат закреплен вверху списка!");
             } else {
-                await updateDoc(chatRef, {
-                    pinned: arrayRemove(state.user.uid)
+                await window.updateDoc(chatRef, {
+                    pinned: window.arrayRemove(state.user.uid)
                 });
-                showToast("Чат откреплен!");
+                showToast("Чат откреплен.");
             }
+            toggleChatMenu();
         }
 
-        // Блокировка/разблокировка юзера
         async function toggleBlockUser() {
             if (!state.activeChatId) return;
             if (state.profile.tier === 'free') {
@@ -1821,37 +1833,37 @@
                 return;
             }
 
-            const chatRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', state.activeChatId);
-            const chatSnap = await getDoc(chatRef);
+            const chatRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', state.activeChatId);
+            const chatSnap = await window.getDoc(chatRef);
             const chat = chatSnap.data();
 
             const partnerId = state.user.uid === chat.buyerId ? chat.sellerId : chat.buyerId;
             const isBlocked = chat.blocked && chat.blocked.includes(partnerId);
 
             if (!isBlocked) {
-                await updateDoc(chatRef, {
-                    blocked: arrayUnion(partnerId)
+                await window.updateDoc(chatRef, {
+                    blocked: window.arrayUnion(partnerId)
                 });
                 showToast("Собеседник заблокирован!");
             } else {
-                await updateDoc(chatRef, {
-                    blocked: arrayRemove(partnerId)
+                await window.updateDoc(chatRef, {
+                    blocked: window.arrayRemove(partnerId)
                 });
                 showToast("Собеседник разблокирован!");
             }
+            toggleChatMenu();
         }
 
-        // Безвозвратное удаление чата (Premium Only)
         async function deleteChatPermanently() {
             if (state.profile.tier !== 'repremium') {
-                showToast("Удаление чата без возврата доступно только на тарифе RePremium!", "error");
+                showToast("Вечное удаление переписки доступно только подписчикам RePremium!", "error");
                 return;
             }
             if (!state.activeChatId) return;
 
-            const chatRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', state.activeChatId);
-            await deleteDoc(chatRef);
-            showToast("Чат навсегда удален для обеих сторон!");
+            const chatRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', state.activeChatId);
+            await window.deleteDoc(chatRef);
+            showToast("Чат полностью удален для обеих сторон безвозвратно.");
             navigateTo('home');
         }
 
@@ -1864,26 +1876,32 @@
             const isMuted = state.activeChatNotification[state.activeChatId];
             if (isMuted) {
                 delete state.activeChatNotification[state.activeChatId];
-                showToast("Уведомления включены для этого чата!");
+                showToast("Уведомления успешно включены!");
             } else {
                 state.activeChatNotification[state.activeChatId] = true;
-                showToast("Уведомления выключены для этого чата!");
+                showToast("Уведомления отключены.");
             }
             toggleChatMenu();
         }
     </script>
 
     <script>
-        // Рендер личного или публичного профиля
+        // Профиль пользователя
         async function renderUserProfile() {
             const user = state.user;
             if (!user || !state.profile) return;
 
-            document.getElementById('profile-nickname').innerText = state.profile.nickname;
+            // Никнейм с бейджами активности
+            const nickEl = document.getElementById('profile-nickname');
+            if (state.profile.status === 'restricted') {
+                nickEl.innerHTML = `${state.profile.nickname} <span class="text-amber-500 text-sm ml-1" title="Аккаунт ограничен"><i class="fa-solid fa-triangle-exclamation"></i> ограничен</span>`;
+            } else {
+                nickEl.innerText = state.profile.nickname;
+            }
+
             document.getElementById('profile-unique-id').innerText = `USER ID: ${state.profile.uid}`;
             document.getElementById('profile-reg-date').innerText = `РЕГИСТРАЦИЯ: ${formatDate(state.profile.regDate)}`;
 
-            // Настройка бейджа тарифа
             const badge = document.getElementById('profile-tier-badge');
             const expireText = document.getElementById('profile-expire');
             const upgradeBtn = document.getElementById('profile-upgrade-btn');
@@ -1891,19 +1909,18 @@
             badge.innerText = state.profile.tier;
             if (state.profile.tier === 'repremium') {
                 badge.className = "premium-shimmer px-3 py-1 rounded-full text-xs font-extrabold text-white uppercase";
-                expireText.innerText = "Подписка: Бессрочный Люкс";
+                expireText.innerText = "Подписка: RePremium (Бессрочно)";
                 upgradeBtn.classList.add('hidden');
             } else if (state.profile.tier === 'replus') {
                 badge.className = "bg-amber-500 text-black px-3 py-1 rounded-full text-xs font-extrabold uppercase";
-                expireText.innerText = "Подписка активна (RePlus)";
+                expireText.innerText = "Подписка: RePlus (Премиум-реселлер)";
                 upgradeBtn.classList.add('hidden');
             } else {
                 badge.className = "bg-gray-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase";
-                expireText.innerText = "Бесплатный тариф (Free лимиты)";
+                expireText.innerText = "Бесплатный тариф (Лимиты Free)";
                 upgradeBtn.classList.remove('hidden');
             }
 
-            // Аватарка
             const pAvatar = document.getElementById('profile-avatar');
             const pFallback = document.getElementById('profile-avatar-fallback');
             if (state.profile.avatar) {
@@ -1915,7 +1932,6 @@
                 pFallback.classList.remove('hidden');
             }
 
-            // Звезды и средний рейтинг
             const starsContainer = document.getElementById('profile-stars');
             starsContainer.innerHTML = '';
             const rating = state.profile.rating || 5.0;
@@ -1927,12 +1943,11 @@
             }
             document.getElementById('profile-rating-info').innerText = `${rating.toFixed(2)} (${state.profile.reviewsCount || 0} отзывов)`;
 
-            // Подгружаем активные вещи этого юзера
-            const listingsQuery = query(
-                collection(window.db, 'artifacts', window.appId, 'public', 'data', 'listings'),
-                where('sellerId', '==', state.user.uid)
+            const listingsQuery = window.query(
+                window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'listings'),
+                window.where('sellerId', '==', state.user.uid)
             );
-            const snap = await getDocs(listingsQuery);
+            const snap = await window.getDocs(listingsQuery);
             const grid = document.getElementById('profile-listings-grid');
             grid.innerHTML = '';
             
@@ -1947,28 +1962,33 @@
                     </div>
                     <div class="p-3">
                         <h4 class="font-bold text-xs text-white truncate">${item.title}</h4>
-                        <span class="text-xs font-black text-brand-400">${item.price.toLocaleString()} ₽</span>
+                        <span class="text-xs font-black text-brand-theme">${item.price.toLocaleString()} ₽</span>
                     </div>
                 `;
                 grid.appendChild(card);
             });
         }
 
-        // Посмотреть профиль другого продавца
         async function viewPublicProfile(userId) {
-            const userRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', userId);
-            const snap = await getDoc(userRef);
+            const userRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', userId);
+            const snap = await window.getDoc(userRef);
             if (!snap.exists()) return;
 
             const profile = snap.data();
             navigateTo('profile');
 
-            // Подменяем элементы личного кабинета под публичный просмотр
-            document.getElementById('profile-nickname').innerText = profile.nickname;
+            const nickEl = document.getElementById('profile-nickname');
+            if (profile.status === 'banned') {
+                nickEl.innerHTML = `<span class="text-red-500 font-bold"><i class="fa-solid fa-ban"></i> АККАУНТ ЗАБЛОКИРОВАН</span>`;
+            } else if (profile.status === 'restricted') {
+                nickEl.innerHTML = `${profile.nickname} <span class="text-amber-500 text-sm ml-1" title="Ограничен"><i class="fa-solid fa-triangle-exclamation"></i></span>`;
+            } else {
+                nickEl.innerText = profile.nickname;
+            }
+
             document.getElementById('profile-unique-id').innerText = `USER ID: ${profile.uid}`;
             document.getElementById('profile-reg-date').innerText = `РЕГИСТРАЦИЯ: ${formatDate(profile.regDate)}`;
 
-            // Изменение кнопок
             document.getElementById('profile-edit-btn').classList.add('hidden');
             document.getElementById('profile-upgrade-btn').classList.add('hidden');
             
@@ -1996,13 +2016,12 @@
                 pFallback.classList.remove('hidden');
             }
 
-            // Получаем активные вещи продавца
-            const listingsQuery = query(
-                collection(window.db, 'artifacts', window.appId, 'public', 'data', 'listings'),
-                where('sellerId', '==', profile.uid),
-                where('status', '==', 'active')
+            const listingsQuery = window.query(
+                window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'listings'),
+                window.where('sellerId', '==', profile.uid),
+                window.where('status', '==', 'active')
             );
-            const listingsSnap = await getDocs(listingsQuery);
+            const listingsSnap = await window.getDocs(listingsQuery);
             const grid = document.getElementById('profile-listings-grid');
             grid.innerHTML = '';
             
@@ -2017,7 +2036,7 @@
                     </div>
                     <div class="p-3">
                         <h4 class="font-bold text-xs text-white truncate">${item.title}</h4>
-                        <span class="text-xs font-black text-brand-400">${item.price.toLocaleString()} ₽</span>
+                        <span class="text-xs font-black text-brand-theme">${item.price.toLocaleString()} ₽</span>
                     </div>
                 `;
                 grid.appendChild(card);
@@ -2026,15 +2045,50 @@
     </script>
 
     <script>
-        // Мастер объявлений
+        // Создание / Редактирование вещей
         function openCreateListingWizard() {
+            if (state.profile.status === 'restricted') {
+                showToast("Ваш аккаунт ограничен модерацией. Публикация товаров запрещена.", "error");
+                return;
+            }
             document.getElementById('modal-backdrop').classList.remove('hidden');
             document.getElementById('modal-listing-wizard').classList.remove('hidden');
+            document.getElementById('wiz-listing-id').value = '';
+            document.getElementById('wiz-title').value = '';
+            document.getElementById('wiz-img-1').value = '';
+            document.getElementById('wiz-img-2').value = '';
+            document.getElementById('wiz-img-3').value = '';
+            document.getElementById('wiz-color').value = '';
+            document.getElementById('wiz-price').value = '';
+            document.getElementById('wiz-size').value = '';
+            document.getElementById('wiz-desc').value = '';
+            document.getElementById('wiz-city').value = '';
+            document.getElementById('wiz-original').checked = false;
+        }
+
+        async function editMyListing(id) {
+            const item = state.listings.find(x => x.id === id);
+            if (!item) return;
+
+            openCreateListingWizard();
+            document.getElementById('wiz-listing-id').value = item.id;
+            document.getElementById('wiz-title').value = item.title;
+            document.getElementById('wiz-img-1').value = item.images[0] || '';
+            document.getElementById('wiz-img-2').value = item.images[1] || '';
+            document.getElementById('wiz-img-3').value = item.images[2] || '';
+            document.getElementById('wiz-color').value = item.color;
+            document.getElementById('wiz-price').value = item.price;
+            document.getElementById('wiz-size').value = item.size;
+            document.getElementById('wiz-desc').value = item.description;
+            document.getElementById('wiz-city').value = item.city;
+            document.getElementById('wiz-original').checked = item.original || false;
+            document.getElementById('wizard-title').innerText = "Редактировать объявление";
         }
 
         async function handleSaveListing(e) {
             e.preventDefault();
             
+            const existingId = document.getElementById('wiz-listing-id').value;
             const title = document.getElementById('wiz-title').value.trim();
             const imgs = [
                 document.getElementById('wiz-img-1').value.trim(),
@@ -2051,15 +2105,15 @@
             const isOriginal = document.getElementById('wiz-original').checked;
 
             if (isOriginal && state.profile.tier === 'free') {
-                showToast("Опция «Оригинал» доступна только платным подписчикам нашей площадки!", "error");
+                showToast("Отметка «Оригинал» доступна только платным подписчикам нашей площадки!", "error");
                 return;
             }
 
             try {
-                const listingId = crypto.randomUUID().substring(0, 8);
-                const listingRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'listings', listingId);
+                const listingId = existingId || crypto.randomUUID().substring(0, 8);
+                const listingRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'listings', listingId);
 
-                await setDoc(listingRef, {
+                await window.setDoc(listingRef, {
                     id: listingId,
                     sellerId: state.user.uid,
                     title: title,
@@ -2071,11 +2125,11 @@
                     description: desc,
                     city: city,
                     original: isOriginal,
-                    status: 'on_moderation', // отправляется на проверку админу
+                    status: 'on_moderation', // Уходит на проверку админу
                     created_at: new Date().toISOString()
                 });
 
-                showToast("Ваше объявление отправлено на модерацию!");
+                showToast("Лот успешно отправлен модераторам на проверку!");
                 closeModal();
                 navigateTo('my-listings');
             } catch (err) {
@@ -2083,14 +2137,12 @@
             }
         }
 
-        // Рендер личных объявлений и статусов
         async function renderMyListings() {
             const grid = document.getElementById('my-listings-grid');
             const empty = document.getElementById('my-listings-empty');
             if (!grid) return;
 
             grid.innerHTML = '';
-            
             const myListings = state.listings.filter(x => x.sellerId === state.user.uid);
             
             if (myListings.length === 0) {
@@ -2104,7 +2156,7 @@
                 let statusBadge = '';
                 if (item.status === 'active') statusBadge = '<span class="bg-green-600 text-white text-[9px] px-2 py-0.5 rounded font-bold uppercase">Активно</span>';
                 else if (item.status === 'on_moderation') statusBadge = '<span class="bg-amber-500 text-black text-[9px] px-2 py-0.5 rounded font-bold uppercase">На проверке</span>';
-                else statusBadge = '<span class="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded font-bold uppercase">Заблокировано</span>';
+                else statusBadge = '<span class="bg-red-600 text-white text-[9px] px-2 py-0.5 rounded font-bold uppercase">Отклонено</span>';
 
                 const card = document.createElement('div');
                 card.className = "bg-[#0e1626] border border-emerald-950/20 rounded-2xl overflow-hidden shadow-lg flex flex-col justify-between";
@@ -2113,9 +2165,11 @@
                         <img class="w-full h-full object-cover" src="${item.images[0] || ''}" alt="">
                         <div class="absolute top-2 left-2">${statusBadge}</div>
                     </div>
-                    <div class="p-3 space-y-2">
-                        <h4 class="font-bold text-xs text-white truncate">${item.title}</h4>
-                        <span class="text-xs font-black text-brand-400 block">${item.price.toLocaleString()} ₽</span>
+                    <div class="p-3 space-y-2 flex-1 flex flex-col justify-between">
+                        <div>
+                            <h4 class="font-bold text-xs text-white truncate">${item.title}</h4>
+                            <span class="text-xs font-black text-brand-theme block">${item.price.toLocaleString()} ₽</span>
+                        </div>
                         <div class="flex gap-2 pt-1 border-t border-gray-800">
                             <button onclick="editMyListing('${item.id}')" class="flex-1 py-1.5 bg-[#152035] hover:bg-gray-800 text-[10px] font-bold rounded text-white transition">Редакт.</button>
                             <button onclick="deleteMyListing('${item.id}')" class="flex-1 py-1.5 bg-red-950/40 text-red-400 hover:bg-red-900 hover:text-white text-[10px] font-bold rounded transition">Удалить</button>
@@ -2127,13 +2181,13 @@
         }
 
         async function deleteMyListing(id) {
-            const isConfirmed = confirm("Вы точно хотите удалить объявление? вернуть его никак не получится.");
+            const isConfirmed = confirm("Вы точно хотите удалить объявление? Вернуть его будет невозможно.");
             if (!isConfirmed) return;
 
             try {
-                const listingRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'listings', id);
-                await deleteDoc(listingRef);
-                showToast("Объявление успешно удалено!");
+                const listingRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'listings', id);
+                await window.deleteDoc(listingRef);
+                showToast("Объявление безвозвратно удалено!");
                 renderMyListings();
             } catch (err) {
                 showToast(err.message, 'error');
@@ -2142,6 +2196,7 @@
     </script>
 
     <script>
+        // Смена профиля
         function openEditProfileModal() {
             document.getElementById('modal-backdrop').classList.remove('hidden');
             document.getElementById('modal-edit-profile').classList.remove('hidden');
@@ -2164,11 +2219,10 @@
             }
 
             try {
-                // Отправляем изменения на одобрение админу (создаем запрос в коллекцию модерации)
                 const modId = crypto.randomUUID().substring(0, 8);
-                const modRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'moderation', modId);
+                const modRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'moderation', modId);
                 
-                await setDoc(modRef, {
+                await window.setDoc(modRef, {
                     id: modId,
                     userId: state.user.uid,
                     requestedNick: newNick,
@@ -2178,7 +2232,7 @@
                     created_at: new Date().toISOString()
                 });
 
-                showToast("Запрос на изменение профиля отправлен модераторам!");
+                showToast("Изменения никнейма/аватарки успешно отправлены на модерацию!");
                 closeModal();
             } catch (err) {
                 showToast(err.message, 'error');
@@ -2193,18 +2247,19 @@
             document.getElementById('modal-complaint').classList.add('hidden');
             document.getElementById('modal-rules-full').classList.add('hidden');
         }
+
+        function showRulesPopup() {
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-rules-full').classList.remove('hidden');
+        }
     </script>
 
     <script>
-        // Имитация покупки подписок и промокоды
+        // Имитация планов
         function purchasePlan(planType) {
-            const pId = planType === 'replus' ? 'premium-select-replus' : 'premium-select-repremium';
-            const value = document.getElementById(pId).value;
-
-            // Выберите метод оплаты
-            const paymentChoice = confirm("Выберите метод оплаты:\n\nОК — Оплата банковской картой\nОтмена — Ввести промокод внизу");
-            if (paymentChoice) {
-                showToast("Этот метод оплаты временно недоступен, используйте промокод.", "error");
+            const choice = confirm("Перейти к оплате банковской картой?");
+            if (choice) {
+                showToast("Данный способ оплаты временно недоступен. Пожалуйста, введите промокод.", "error");
             }
         }
 
@@ -2213,30 +2268,27 @@
             if (!val) return;
 
             try {
-                const promoRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'promocodes', val);
-                const snap = await getDoc(promoRef);
+                const promoRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'promocodes', val);
+                const snap = await window.getDoc(promoRef);
 
                 if (snap.exists()) {
                     const promo = snap.data();
                     
-                    // Обновляем профиль пользователя
-                    const userRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', state.user.uid);
-                    await updateDoc(userRef, {
+                    const userRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', state.user.uid);
+                    await window.updateDoc(userRef, {
                         tier: promo.tier,
                         tierExpire: new Date(Date.now() + promo.durationDays * 24 * 60 * 60 * 1000).toISOString()
                     });
 
-                    // Удаляем использованный промокод (Rule 3)
-                    await deleteDoc(promoRef);
+                    await window.deleteDoc(promoRef);
 
-                    showToast(`Промокод успешно активирован! Получен статус ${promo.tier.toUpperCase()} на ${promo.durationDays} дней.`);
+                    showToast(`Промокод успешно применен! Статус ${promo.tier.toUpperCase()} получен на ${promo.durationDays} дней.`);
                     document.getElementById('promo-input').value = '';
                     
-                    // Обновляем локальный стейт
                     state.profile.tier = promo.tier;
                     renderUserProfile();
                 } else {
-                    showToast("Такой промокод не найден или уже был использован.", "error");
+                    showToast("Такой промокод не найден в базе или был использован ранее.", "error");
                 }
             } catch (err) {
                 showToast(err.message, 'error');
@@ -2245,7 +2297,7 @@
     </script>
 
     <script>
-        // Оценки сделок
+        // Оценки и отзывы
         function openReviewModal() {
             document.getElementById('modal-backdrop').classList.remove('hidden');
             document.getElementById('modal-review').classList.remove('hidden');
@@ -2259,47 +2311,45 @@
             if (!text || !state.activeChatId) return;
 
             try {
-                // Определяем кому предназначен отзыв
-                const chatRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', state.activeChatId);
-                const chatSnap = await getDoc(chatRef);
+                const chatRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'chats', state.activeChatId);
+                const chatSnap = await window.getDoc(chatRef);
                 const chat = chatSnap.data();
                 
                 const targetUserId = state.user.uid === chat.buyerId ? chat.sellerId : chat.buyerId;
 
                 const reviewId = crypto.randomUUID().substring(0, 8);
-                const reviewRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'reviews', reviewId);
+                const reviewRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'reviews', reviewId);
 
-                await setDoc(reviewRef, {
+                await window.setDoc(reviewRef, {
                     id: reviewId,
                     authorId: state.user.uid,
                     targetUserId: targetUserId,
                     stars: stars,
                     text: text,
                     success: success,
-                    status: 'pending', // модератор одобряет
+                    status: 'pending',
                     created_at: new Date().toISOString()
                 });
 
-                showToast("Отзыв отправлен на проверку модераторам!");
+                showToast("Отзыв успешно отправлен на модерацию!");
                 closeModal();
             } catch (err) {
                 showToast(err.message, 'error');
             }
         }
 
-        async function showUserReviews() {
+        function showUserReviews() {
             if (!state.profile) return;
             showUserReviewsById(state.profile.uid);
         }
 
         async function showUserReviewsById(userId) {
-            // Подгружаем и рендерим все одобренные отзывы продавца
-            const reviewsQuery = query(
-                collection(window.db, 'artifacts', window.appId, 'public', 'data', 'reviews'),
-                where('targetUserId', '==', userId),
-                where('status', '==', 'approved')
+            const reviewsQuery = window.query(
+                window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'reviews'),
+                window.where('targetUserId', '==', userId),
+                window.where('status', '==', 'approved')
             );
-            const snap = await getDocs(reviewsQuery);
+            const snap = await window.getDocs(reviewsQuery);
             
             const viewPort = document.getElementById('view-port');
             viewPort.innerHTML = `
@@ -2312,7 +2362,7 @@
 
             const container = document.getElementById('reviews-list-container');
             if (snap.empty) {
-                container.innerHTML = '<p class="text-gray-500 text-center py-8">Об этом пользователе еще не оставляли отзывов.</p>';
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">Пока нет одобренных отзывов.</p>';
                 return;
             }
 
@@ -2335,8 +2385,7 @@
                     </div>
                     <p class="text-xs text-gray-300 leading-relaxed">${r.text}</p>
                     <div class="flex items-center justify-between pt-2 border-t border-gray-800 text-[10px] text-gray-400">
-                        <span>Сделка: ${r.success ? 'Совершилась успешно' : 'Сорвалась'}</span>
-                        <button onclick="reportReview('${r.id}')" class="text-red-400 hover:underline"><i class="fa-solid fa-circle-exclamation mr-1"></i> Пожаловаться в поддержку</button>
+                        <span>Состояние сделки: ${r.success ? 'Успешно' : 'Сорвалась'}</span>
                     </div>
                 `;
                 container.appendChild(card);
@@ -2345,20 +2394,20 @@
     </script>
 
     <script>
-        // Инициализация чата поддержки (1-на-1 с админом)
+        // Поддержка и Админ-чат
         async function initSupportChat() {
             const supportId = `support_${state.user.uid}`;
-            const chatRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'support', supportId);
-            const chatSnap = await getDoc(chatRef);
+            const chatRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'support', supportId);
+            const chatSnap = await window.getDoc(chatRef);
 
             if (!chatSnap.exists()) {
-                await setDoc(chatRef, {
+                await window.setDoc(chatRef, {
                     id: supportId,
                     userId: state.user.uid,
                     messages: [
                         {
                             senderId: 'admin',
-                            text: 'Здравствуйте! Напишите ваш вопрос или проблему здесь. Поддержка Relook скоро вам ответит.',
+                            text: 'Здравствуйте! Опишите возникшую проблему. Модераторы чата поддержки скоро вам ответят.',
                             time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
                         }
                     ],
@@ -2366,18 +2415,15 @@
                 });
             }
 
-            // Открываем чат поддержки
             navigateTo('chat');
             
-            // Настройка под чат поддержки (перенастройка UI)
-            document.getElementById('chat-partner-nickname').innerText = "Официальная Служба Поддержки Relook";
-            document.getElementById('chat-partner-status-text').innerText = "Support Agent (Online)";
+            document.getElementById('chat-partner-nickname').innerText = "Служба Поддержки Relook";
+            document.getElementById('chat-partner-status-text').innerText = "Support (Online)";
             document.getElementById('chat-partner-status-dot').className = "absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#0e1626]";
             document.getElementById('chat-listing-banner').classList.add('hidden');
             document.getElementById('chat-menu-btn').classList.add('hidden');
 
-            // Подписка на сообщения чата поддержки
-            onSnapshot(chatRef, (docSnap) => {
+            window.onSnapshot(chatRef, (docSnap) => {
                 const data = docSnap.data();
                 if (!data) return;
 
@@ -2388,7 +2434,7 @@
                     const isMyMsg = msg.senderId === state.user.uid;
                     const bubble = document.createElement('div');
                     bubble.className = `max-w-[70%] flex flex-col space-y-1 p-3 rounded-2xl text-xs relative ${
-                        isMyMsg ? 'bg-brand-800 text-white self-end rounded-tr-none' : 'bg-[#152035] text-gray-100 self-start rounded-tl-none border-l-4 border-brand-500'
+                        isMyMsg ? 'bg-brand-800 text-white self-end rounded-tr-none' : 'bg-[#152035] text-gray-100 self-start rounded-tl-none border-l-4 border-emerald-500'
                     }`;
                     bubble.innerHTML = `
                         <p class="leading-relaxed break-words">${msg.text}</p>
@@ -2399,7 +2445,6 @@
                 msgArea.scrollTop = msgArea.scrollHeight;
             });
 
-            // Настройка пересылки формы под чат саппорта
             document.getElementById('chat-send-form').onsubmit = async (e) => {
                 e.preventDefault();
                 const input = document.getElementById('chat-msg-input');
@@ -2412,15 +2457,14 @@
                     time: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
                 };
 
-                await updateDoc(chatRef, {
-                    messages: arrayUnion(msgObj),
+                await window.updateDoc(chatRef, {
+                    messages: window.arrayUnion(msgObj),
                     updated_at: new Date().toISOString()
                 });
                 input.value = '';
             };
         }
 
-        // Настройки и темы
         function toggleTheme() {
             state.theme = state.theme === 'dark' ? 'light' : 'dark';
             localStorage.setItem('relook-theme', state.theme);
@@ -2430,7 +2474,7 @@
 
         function setBrandColor(color) {
             if (state.profile.tier !== 'repremium') {
-                showToast("Смена темы бренда доступна только подписчикам RePremium!", "error");
+                showToast("Смена цветовой темы бренда доступна только на тарифе RePremium!", "error");
                 return;
             }
             state.brandColor = color;
@@ -2456,9 +2500,9 @@
 
             try {
                 const compId = crypto.randomUUID().substring(0, 8);
-                const compRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'complaints', compId);
+                const compRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'complaints', compId);
 
-                await setDoc(compRef, {
+                await window.setDoc(compRef, {
                     id: compId,
                     reporterId: state.user.uid,
                     targetMsgId: msgId,
@@ -2467,7 +2511,7 @@
                     created_at: new Date().toISOString()
                 });
 
-                showToast("Жалоба успешно отправлена модераторам!");
+                showToast("Жалоба на сообщение направлена администрации!");
                 closeModal();
             } catch (err) {
                 showToast(err.message, 'error');
@@ -2476,14 +2520,13 @@
     </script>
 
     <script>
-        // АДМИН-ФУНКЦИИ
+        // Админ-панель
         async function loadAdminPanel() {
-            // Подгружаем очередь аватарок
-            const modQuery = query(
-                collection(window.db, 'artifacts', window.appId, 'public', 'data', 'moderation'),
-                where('status', '==', 'pending')
+            const modQuery = window.query(
+                window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'moderation'),
+                window.where('status', '==', 'pending')
             );
-            const modSnap = await getDocs(modQuery);
+            const modSnap = await window.getDocs(modQuery);
             const modAvatarContainer = document.getElementById('admin-avatars-list');
             const modNickContainer = document.getElementById('admin-nicknames-list');
             
@@ -2494,11 +2537,11 @@
                 const item = d.data();
                 if (item.requestedAvatar) {
                     const row = document.createElement('div');
-                    row.className = "flex items-center justify-between bg-[#070b13] p-3 rounded-xl border border-emerald-950/10 text-xs";
+                    row.className = "flex items-center justify-between bg-[#070b13] p-3 rounded-xl border border-emerald-950/10 text-xs text-white";
                     row.innerHTML = `
                         <div class="flex items-center gap-2">
                             <img class="w-8 h-8 rounded-full object-cover" src="${item.requestedAvatar}">
-                            <span class="font-mono text-[9px] text-gray-400">ID: ${item.userId}</span>
+                            <span class="font-mono text-[9px] text-gray-400">UID: ${item.userId}</span>
                         </div>
                         <div class="flex gap-1">
                             <button onclick="approveAvatar('${item.id}', true)" class="px-2 py-1 bg-green-600 text-white rounded">Да</button>
@@ -2510,11 +2553,11 @@
 
                 if (item.requestedNick) {
                     const row = document.createElement('div');
-                    row.className = "flex items-center justify-between bg-[#070b13] p-3 rounded-xl border border-emerald-950/10 text-xs";
+                    row.className = "flex items-center justify-between bg-[#070b13] p-3 rounded-xl border border-emerald-950/10 text-xs text-white";
                     row.innerHTML = `
                         <div>
                             <p class="font-bold text-white">${item.requestedNick}</p>
-                            <span class="font-mono text-[9px] text-gray-400">ID: ${item.userId}</span>
+                            <span class="font-mono text-[9px] text-gray-400">UID: ${item.userId}</span>
                         </div>
                         <div class="flex gap-1">
                             <button onclick="approveNick('${item.id}', true)" class="px-2 py-1 bg-green-600 text-white rounded">Да</button>
@@ -2525,23 +2568,22 @@
                 }
             });
 
-            // Очередь вещей
-            const listQuery = query(
-                collection(window.db, 'artifacts', window.appId, 'public', 'data', 'listings'),
-                where('status', '==', 'on_moderation')
+            const listQuery = window.query(
+                window.collection(window.db, 'artifacts', window.appId, 'public', 'data', 'listings'),
+                window.where('status', '==', 'on_moderation')
             );
-            const listSnap = await getDocs(listQuery);
+            const listSnap = await window.getDocs(listQuery);
             const listingsContainer = document.getElementById('admin-listings-list');
             listingsContainer.innerHTML = '';
 
             listSnap.forEach(d => {
                 const item = d.data();
                 const row = document.createElement('div');
-                row.className = "flex items-center justify-between bg-[#070b13] p-3 rounded-xl border border-emerald-950/10 text-xs";
+                row.className = "flex items-center justify-between bg-[#070b13] p-3 rounded-xl border border-emerald-950/10 text-xs text-white";
                 row.innerHTML = `
                     <div>
-                        <p class="font-bold text-white">${item.title} — ${item.price}₽</p>
-                        <span class="text-gray-400 text-[10px]">ID: ${item.id}</span>
+                        <p class="font-bold text-white">${item.title} — ${item.price} ₽</p>
+                        <span class="text-gray-450 text-[10px]">ID: ${item.id}</span>
                     </div>
                     <div class="flex gap-1">
                         <button onclick="approveListing('${item.id}', true)" class="px-2 py-1 bg-green-600 text-white rounded">Да</button>
@@ -2554,15 +2596,15 @@
 
         async function approveAvatar(modId, isApproved) {
             try {
-                const modRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'moderation', modId);
-                const modSnap = await getDoc(modRef);
+                const modRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'moderation', modId);
+                const modSnap = await window.getDoc(modRef);
                 const mod = modSnap.data();
 
                 if (isApproved) {
-                    const userRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', mod.userId);
-                    await updateDoc(userRef, { avatar: mod.requestedAvatar });
+                    const userRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', mod.userId);
+                    await window.updateDoc(userRef, { avatar: mod.requestedAvatar });
                 }
-                await updateDoc(modRef, { status: 'approved' });
+                await window.updateDoc(modRef, { status: 'approved' });
                 showToast("Решение по аватарке сохранено!");
                 loadAdminPanel();
             } catch (err) {
@@ -2572,16 +2614,16 @@
 
         async function approveNick(modId, isApproved) {
             try {
-                const modRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'moderation', modId);
-                const modSnap = await getDoc(modRef);
+                const modRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'moderation', modId);
+                const modSnap = await window.getDoc(modRef);
                 const mod = modSnap.data();
 
                 if (isApproved) {
-                    const userRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', mod.userId);
-                    await updateDoc(userRef, { nickname: mod.requestedNick });
+                    const userRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', mod.userId);
+                    await window.updateDoc(userRef, { nickname: mod.requestedNick });
                 }
-                await updateDoc(modRef, { status: 'approved' });
-                showToast("Решение по никнейму сохранено!");
+                await window.updateDoc(modRef, { status: 'approved' });
+                showToast("Никнейм успешно проверен!");
                 loadAdminPanel();
             } catch (err) {
                 showToast(err.message, 'error');
@@ -2590,47 +2632,62 @@
 
         async function approveListing(listId, isApproved) {
             try {
-                const listRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'listings', listId);
-                await updateDoc(listRef, { status: isApproved ? 'active' : 'declined' });
-                showToast(isApproved ? "Вещь одобрена и выложена!" : "Вещь отклонена");
+                const listRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'listings', listId);
+                await window.updateDoc(listRef, { status: isApproved ? 'active' : 'declined' });
+                showToast(isApproved ? "Вещь выставлена на платформу!" : "Лот отклонен модератором");
                 loadAdminPanel();
             } catch (err) {
                 showToast(err.message, 'error');
             }
         }
 
-        // Админ-бан
+        // Админ: блокировка (бан)
         async function adminBlockUser(shouldBlock) {
             const uid = document.getElementById('admin-user-id').value.trim();
             if (!uid) return;
 
             try {
-                const userRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', uid);
-                await updateDoc(userRef, { 
-                    status: shouldBlock ? 'banned' : 'active',
-                    nickname: shouldBlock ? 'АККАУНТ ЗАБЛОКИРОВАН' : 'Пользователь'
+                const userRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', uid);
+                await window.updateDoc(userRef, { 
+                    status: shouldBlock ? 'banned' : 'active'
                 });
-                showToast(shouldBlock ? "Пользователь забанен навсегда!" : "Пользователь успешно разбанен");
+                showToast(shouldBlock ? "Пользователь заблокирован навсегда!" : "Пользователь разбанен");
             } catch (err) {
                 showToast(err.message, 'error');
             }
         }
 
-        // Админ-ограничение (Ограничение создания и переписок)
+        // Админ: ограничение
         async function adminRestrictUser(shouldRestrict) {
             const uid = document.getElementById('admin-restrict-id').value.trim();
             if (!uid) return;
 
             try {
-                const userRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', uid);
-                await updateDoc(userRef, { status: shouldRestrict ? 'restricted' : 'active' });
-                showToast(shouldRestrict ? "Пользователь ограничен в активности" : "Ограничения успешно сняты");
+                const userRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', uid);
+                await window.updateDoc(userRef, { status: shouldRestrict ? 'restricted' : 'active' });
+                showToast(shouldRestrict ? "Пользователь ограничен" : "Ограничения успешно сняты");
             } catch (err) {
                 showToast(err.message, 'error');
             }
         }
 
-        // Генерация промокодов
+        // Админ: отправка варна
+        async function adminSendWarning() {
+            const uid = document.getElementById('admin-warn-id').value.trim();
+            const reason = document.getElementById('admin-warn-reason').value.trim();
+
+            if (!uid || !reason) return;
+
+            try {
+                const userRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'profiles', uid);
+                await window.updateDoc(userRef, { warning: reason });
+                showToast("Предупреждение выслано пользователю!");
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        // Админ: промокоды
         async function adminGeneratePromo() {
             const type = document.getElementById('admin-promo-type').value;
             const parts = type.split('-');
@@ -2638,10 +2695,10 @@
             const months = parseInt(parts[1]);
 
             try {
-                const code = `RLK-${crypto.randomUUID().substring(0, 8).toUpperCase()}`;
-                const promoRef = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'promocodes', code);
+                const code = `RELOOK-${crypto.randomUUID().substring(0, 8).toUpperCase()}`;
+                const promoRef = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'promocodes', code);
 
-                await setDoc(promoRef, {
+                await window.setDoc(promoRef, {
                     code: code,
                     tier: tier,
                     durationDays: months * 30,
@@ -2649,20 +2706,20 @@
                 });
 
                 copyToClipboard(code);
-                showToast(`Промокод сгенерирован и скопирован: ${code}`);
+                showToast(`Промокод скопирован: ${code}`);
             } catch (err) {
                 showToast(err.message, 'error');
             }
         }
 
-        // Быстрое удаление контента
+        // Админ: быстрое удаление
         async function adminDeleteListing() {
             const id = document.getElementById('admin-target-id').value.trim();
             if (!id) return;
 
             try {
-                const ref = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'listings', id);
-                await deleteDoc(ref);
+                const ref = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'listings', id);
+                await window.deleteDoc(ref);
                 showToast("Объявление стерто с платформы!");
             } catch (err) {
                 showToast(err.message, 'error');
@@ -2674,8 +2731,8 @@
             if (!id) return;
 
             try {
-                const ref = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'reviews', id);
-                await deleteDoc(ref);
+                const ref = window.doc(window.db, 'artifacts', window.appId, 'public', 'data', 'reviews', id);
+                await window.deleteDoc(ref);
                 showToast("Отзыв успешно удален!");
             } catch (err) {
                 showToast(err.message, 'error');
